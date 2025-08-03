@@ -78,7 +78,11 @@ import { initializeForemanClient, createRun } from '@codespin/foreman-client';
 // Initialize client (automatically fetches Redis configuration)
 const foremanConfig = {
   endpoint: 'http://localhost:3000',
-  apiKey: 'fmn_dev_myorg_abc123'
+  apiKey: 'fmn_dev_myorg_abc123',
+  queues: {  // Optional: override default queue names
+    taskQueue: 'my-app:tasks',
+    resultQueue: 'my-app:results'
+  }
 };
 
 const client = await initializeForemanClient(foremanConfig);

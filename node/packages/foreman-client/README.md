@@ -9,7 +9,7 @@ Complete workflow orchestration SDK for Foreman that handles all queue operation
 - 🏃 **Worker Management** - Built-in BullMQ worker creation and management
 - 🔄 **Task Lifecycle** - Full task enqueueing, execution, and status tracking
 - 📊 **Run Data** - Store and query workflow data with tags
-- 🎯 **Functional API** - Clean functional programming style
+- 🎯 **Clean API** - Simple, composable functions
 
 ## Installation
 
@@ -27,10 +27,20 @@ import {
   queryRunData
 } from '@codespin/foreman-client';
 
-// Initialize client
+// Initialize client with default queue names from server
 const config = {
   endpoint: 'http://localhost:3000',
   apiKey: 'your-api-key'
+};
+
+// Or override queue names
+const configWithQueues = {
+  endpoint: 'http://localhost:3000',
+  apiKey: 'your-api-key',
+  queues: {
+    taskQueue: 'my-custom-tasks',
+    resultQueue: 'my-custom-results'
+  }
 };
 
 const client = await initializeForemanClient(config);
@@ -78,6 +88,10 @@ type ForemanConfig = {
   endpoint: string;
   apiKey?: string;
   timeout?: number;
+  queues?: {
+    taskQueue?: string;
+    resultQueue?: string;
+  };
 };
 
 type TaskHandler = (task: {
@@ -196,6 +210,28 @@ const worker = await createWorker({
 3. **Tag Data** - Use tags for efficient data querying
 4. **Set Concurrency** - Configure worker concurrency based on your workload
 5. **Clean Shutdown** - Call `worker.stop()` for graceful shutdown
+
+## Configuration Options
+
+### Queue Names
+
+By default, the client fetches queue names from the Foreman server. You can override these:
+
+```typescript
+const config = {
+  endpoint: 'http://localhost:3000',
+  apiKey: 'your-api-key',
+  queues: {
+    taskQueue: 'my-app:tasks',      // Default: from server config
+    resultQueue: 'my-app:results'   // Default: from server config
+  }
+};
+```
+
+This is useful when:
+- Running multiple applications with separate queues
+- Testing with isolated queue names
+- Implementing queue-based routing or priority systems
 
 ## Environment Variables
 

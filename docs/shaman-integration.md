@@ -1,6 +1,6 @@
 # Shaman Integration Guide
 
-This guide shows how Shaman integrates with Foreman using the functional API.
+This guide shows how Shaman integrates with Foreman using the foreman-client library.
 
 ## Key Changes
 
@@ -22,7 +22,11 @@ import {
 
 const foremanConfig: ForemanConfig = {
   endpoint: process.env.FOREMAN_ENDPOINT || 'http://localhost:3000',
-  apiKey: process.env.FOREMAN_API_KEY || 'fmn_prod_shaman_default'
+  apiKey: process.env.FOREMAN_API_KEY || 'fmn_prod_shaman_default',
+  queues: {  // Optional: use shaman-specific queues
+    taskQueue: process.env.SHAMAN_TASK_QUEUE || 'shaman:tasks',
+    resultQueue: process.env.SHAMAN_RESULT_QUEUE || 'shaman:results'
+  }
 };
 
 // Initialize client once

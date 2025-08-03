@@ -32,7 +32,11 @@ import { initializeForemanClient, createRun } from '@codespin/foreman-client';
 // 1. Initialize client
 const config = { 
   endpoint: 'http://localhost:3000',
-  apiKey: 'fmn_prod_myorg_abc123' 
+  apiKey: 'fmn_prod_myorg_abc123',
+  queues: {  // Optional: override queue names
+    taskQueue: 'my-app:tasks',
+    resultQueue: 'my-app:results'
+  }
 };
 const client = await initializeForemanClient(config);
 const { enqueueTask, createWorker } = client;

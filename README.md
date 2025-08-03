@@ -146,7 +146,11 @@ import {
 // Initialize client (fetches Redis config automatically)
 const foremanConfig = {
   endpoint: 'http://localhost:3000',
-  apiKey: 'fmn_prod_myorg_abc123'  // Format: fmn_[env]_[orgId]_[random]
+  apiKey: 'fmn_prod_myorg_abc123',  // Format: fmn_[env]_[orgId]_[random]
+  queues: {  // Optional: override default queue names
+    taskQueue: 'my-app:tasks',
+    resultQueue: 'my-app:results'
+  }
 };
 
 const client = await initializeForemanClient(foremanConfig);
@@ -185,6 +189,20 @@ await worker.start();
 ```
 
 ## Client API Reference
+
+### Types
+
+```typescript
+type ForemanConfig = {
+  endpoint: string;
+  apiKey?: string;
+  timeout?: number;
+  queues?: {
+    taskQueue?: string;
+    resultQueue?: string;
+  };
+}
+```
 
 ### Configuration Functions
 

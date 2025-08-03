@@ -6,6 +6,10 @@ export type ForemanConfig = {
   endpoint: string;
   apiKey?: string;
   timeout?: number;
+  queues?: {
+    taskQueue?: string;
+    resultQueue?: string;
+  };
 };
 
 export type RedisConfig = {

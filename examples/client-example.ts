@@ -1,5 +1,5 @@
 /**
- * Example of using the functional Foreman client API
+ * Example of using the Foreman client API
  */
 
 import { 
@@ -16,7 +16,11 @@ async function main() {
   // 1. Initialize the client
   const foremanConfig = {
     endpoint: 'http://localhost:3000',
-    apiKey: 'your-api-key'
+    apiKey: 'your-api-key',
+    queues: {  // Optional: use custom queue names
+      taskQueue: 'example:tasks',
+      resultQueue: 'example:results'
+    }
   };
 
   // Option 1: Initialize and get configured functions

@@ -44,12 +44,19 @@ export async function initializeForemanClient(
   }
   
   const redisConfig = redisResult.data;
-  const queueConfig = queueResult.data;
+  const serverQueueConfig = queueResult.data;
+  
+  // Merge client-provided queue names with server defaults
+  const queueConfig: QueueConfig = {
+    taskQueue: config.queues?.taskQueue || serverQueueConfig.taskQueue,
+    resultQueue: config.queues?.resultQueue || serverQueueConfig.resultQueue
+  };
   
   logger.info('Foreman client initialized', {
     endpoint: config.endpoint,
     redis: { host: redisConfig.host, port: redisConfig.port },
-    queues: queueConfig
+    queues: queueConfig,
+    customQueues: config.queues ? true : false
   });
   
   return {
@@ -89,7 +96,8 @@ export async function withForemanClient<T>(
 ): Promise<Result<T, Error>> {
   try {
     // Initialize client
-    const { redisConfig, queueConfig } = await initializeForemanClient(config);
+    const initialized = await initializeForemanClient(config);
+    const { redisConfig, queueConfig } = initialized;
     
     // Create client interface
     const client = {

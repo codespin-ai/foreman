@@ -157,7 +157,7 @@ describe('Tasks API', () => {
     it('should filter tasks by status', async () => {
       // Create tasks
       const task1 = await client.post('/tasks', { runId, type: 'task-1', data: {} });
-      const task2 = await client.post('/tasks', { runId, type: 'task-2', data: {} });
+      await client.post('/tasks', { runId, type: 'task-2', data: {} });
       
       // Update one to completed
       await client.put(`/tasks/${task1.id}/status`, {

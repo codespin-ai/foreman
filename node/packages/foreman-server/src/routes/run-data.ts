@@ -15,9 +15,9 @@ router.use(authenticate);
 
 // Validation schemas
 const createRunDataSchema = z.object({
-  taskId: z.string().uuid(),
   key: z.string().min(1).max(255),
   value: z.unknown(),
+  taskId: z.string().uuid(),
   metadata: z.record(z.unknown()).optional()
 });
 
@@ -31,8 +31,11 @@ router.post('/', requirePermission('rundata:write'), async (req, res) => {
     const db = getDb();
     
     const result = await createRunData(db, req.auth!.orgId, {
-      runId,
-      ...input
+      runId: runId!,
+      key: input.key,
+      value: input.value,
+      taskId: input.taskId,
+      metadata: input.metadata
     });
     
     if (!result.success) {
@@ -59,7 +62,7 @@ router.get('/:key', requirePermission('rundata:read'), async (req, res) => {
     const { runId, key } = req.params;
     const db = getDb();
     
-    const result = await getRunData(db, runId, key, req.auth!.orgId);
+    const result = await getRunData(db, runId!, key!, req.auth!.orgId);
     
     if (!result.success) {
       res.status(404).json({ error: result.error.message });
@@ -81,7 +84,7 @@ router.get('/', requirePermission('rundata:read'), async (req, res) => {
     const { runId } = req.params;
     const db = getDb();
     
-    const result = await listRunData(db, runId, req.auth!.orgId);
+    const result = await listRunData(db, runId!, req.auth!.orgId);
     
     if (!result.success) {
       res.status(404).json({ error: result.error.message });

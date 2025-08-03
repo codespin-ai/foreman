@@ -162,7 +162,8 @@ export class ForemanClient {
       const data = await response.json();
 
       if (!response.ok) {
-        return failure(new Error(data.error || `HTTP ${response.status}`));
+        const errorData = data as { error?: string };
+        return failure(new Error(errorData.error || `HTTP ${response.status}`));
       }
 
       return success(data as T);

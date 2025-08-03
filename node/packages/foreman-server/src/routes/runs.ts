@@ -45,7 +45,8 @@ router.post('/', requirePermission('runs:create'), async (req, res) => {
     
     const result = await createRun(db, {
       orgId: req.auth!.orgId,
-      ...input
+      inputData: input.inputData,
+      metadata: input.metadata
     });
     
     if (!result.success) {
@@ -70,7 +71,7 @@ router.post('/', requirePermission('runs:create'), async (req, res) => {
 router.get('/:id', requirePermission('runs:read'), async (req, res) => {
   try {
     const db = getDb();
-    const result = await getRun(db, req.params.id, req.auth!.orgId);
+    const result = await getRun(db, req.params.id!, req.auth!.orgId);
     
     if (!result.success) {
       res.status(404).json({ error: result.error.message });
@@ -92,7 +93,7 @@ router.patch('/:id', requirePermission('runs:update'), async (req, res) => {
     const input = updateRunSchema.parse(req.body);
     const db = getDb();
     
-    const result = await updateRun(db, req.params.id, req.auth!.orgId, input);
+    const result = await updateRun(db, req.params.id!, req.auth!.orgId, input);
     
     if (!result.success) {
       res.status(404).json({ error: result.error.message });

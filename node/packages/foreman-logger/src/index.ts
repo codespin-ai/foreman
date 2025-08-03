@@ -1,4 +1,4 @@
-import pino from 'pino';
+import { pino } from 'pino';
 
 const baseLogger = pino({
   level: process.env.LOG_LEVEL || 'info',
@@ -22,8 +22,8 @@ const baseLogger = pino({
  * const logger = createLogger('foreman-server');
  * logger.info('Server started', { port: 3000 });
  */
-export function createLogger(name: string): pino.Logger {
+export function createLogger(name: string) {
   return baseLogger.child({ name });
 }
 
-export type Logger = pino.Logger;
+export type Logger = ReturnType<typeof createLogger>;

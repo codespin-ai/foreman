@@ -126,7 +126,7 @@ describe('Runs API', () => {
     it('should filter runs by status', async () => {
       // Create runs with different statuses
       const run1 = await client.post('/runs', { inputData: { test: 1 } });
-      const run2 = await client.post('/runs', { inputData: { test: 2 } });
+      await client.post('/runs', { inputData: { test: 2 } });
       
       // Update one to running
       await client.put(`/runs/${run1.id}/status`, { status: 'running' });

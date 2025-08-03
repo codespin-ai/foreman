@@ -7,15 +7,13 @@ import type { ApiKeyDbRow } from '../types.js';
 const logger = createLogger('foreman:middleware:auth');
 
 // Extend Express Request type
-declare global {
-  namespace Express {
-    interface Request {
-      auth?: {
-        orgId: string;
-        apiKeyId: string;
-        permissions: Record<string, boolean>;
-      };
-    }
+declare module 'express-serve-static-core' {
+  interface Request {
+    auth?: {
+      orgId: string;
+      apiKeyId: string;
+      permissions: Record<string, boolean>;
+    };
   }
 }
 

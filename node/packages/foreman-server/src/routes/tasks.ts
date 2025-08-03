@@ -39,7 +39,14 @@ router.post('/', requirePermission('tasks:create'), async (req, res) => {
     const input = createTaskSchema.parse(req.body);
     const db = getDb();
     
-    const result = await createTask(db, req.auth!.orgId, input);
+    const result = await createTask(db, req.auth!.orgId, {
+      runId: input.runId,
+      parentTaskId: input.parentTaskId,
+      type: input.type,
+      inputData: input.inputData,
+      metadata: input.metadata,
+      maxRetries: input.maxRetries
+    });
     
     if (!result.success) {
       res.status(400).json({ error: result.error.message });
@@ -63,7 +70,7 @@ router.post('/', requirePermission('tasks:create'), async (req, res) => {
 router.get('/:id', requirePermission('tasks:read'), async (req, res) => {
   try {
     const db = getDb();
-    const result = await getTask(db, req.params.id, req.auth!.orgId);
+    const result = await getTask(db, req.params.id!, req.auth!.orgId);
     
     if (!result.success) {
       res.status(404).json({ error: result.error.message });
@@ -85,7 +92,7 @@ router.patch('/:id', requirePermission('tasks:update'), async (req, res) => {
     const input = updateTaskSchema.parse(req.body);
     const db = getDb();
     
-    const result = await updateTask(db, req.params.id, req.auth!.orgId, input);
+    const result = await updateTask(db, req.params.id!, req.auth!.orgId, input);
     
     if (!result.success) {
       res.status(404).json({ error: result.error.message });

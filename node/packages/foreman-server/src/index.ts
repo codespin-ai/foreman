@@ -85,7 +85,6 @@ async function start(): Promise<void> {
     // Start listening
     app.listen(port, () => {
       logger.info('Server running', { port });
-      console.log(`Server running on port ${port}`);
     });
   } catch (error) {
     logger.error('Failed to start server', { error });

@@ -1,0 +1,110 @@
+import express from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import compression from 'compression';
+import rateLimit from 'express-rate-limit';
+import { config } from 'dotenv';
+import { createLogger } from '@codespin/foreman-logger';
+import { getDb, closeDb } from '@codespin/foreman-db';
+import { runsRouter } from './routes/runs.js';
+import { tasksRouter } from './routes/tasks.js';
+import { runDataRouter } from './routes/run-data.js';
+
+// Load environment variables
+config();
+
+const logger = createLogger('foreman-server');
+const app = express();
+const port = process.env.FOREMAN_SERVER_PORT || process.env.PORT || 5002;
+
+// Security middleware
+app.use(helmet());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN?.split(',') || '*',
+  credentials: true
+}));
+
+// Request parsing
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+app.use(compression());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.'
+});
+app.use('/api/', limiter);
+
+// Request logging
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    logger.info('Request completed', {
+      method: req.method,
+      url: req.url,
+      status: res.statusCode,
+      duration,
+      ip: req.ip
+    });
+  });
+  next();
+});
+
+// Health check (no auth required)
+app.get('/health', (_req, res) => {
+  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
+// API routes
+app.use('/api/v1/runs', runsRouter);
+app.use('/api/v1/tasks', tasksRouter);
+app.use('/api/v1/runs/:runId/data', runDataRouter);
+
+// 404 handler
+app.use((_req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
+// Error handler
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  logger.error('Unhandled error', { error: err });
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+// Start server
+async function start(): Promise<void> {
+  try {
+    // Test database connection
+    const db = getDb();
+    await db.one('SELECT 1 as ok');
+    logger.info('Database connection established');
+    
+    // Start listening
+    app.listen(port, () => {
+      logger.info('Server running', { port });
+      console.log(`Server running on port ${port}`);
+    });
+  } catch (error) {
+    logger.error('Failed to start server', { error });
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received, shutting down gracefully');
+  await closeDb();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  logger.info('SIGINT received, shutting down gracefully');
+  await closeDb();
+  process.exit(0);
+});
+
+// Start the server
+start();

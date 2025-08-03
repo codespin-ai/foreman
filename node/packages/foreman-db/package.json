@@ -1,0 +1,27 @@
+{
+  "name": "@codespin/foreman-db",
+  "version": "0.0.1",
+  "description": "Database connection management for Foreman",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix"
+  },
+  "dependencies": {
+    "@codespin/foreman-logger": "file:../foreman-logger",
+    "pg": "^8.13.1",
+    "pg-promise": "^11.10.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "@types/pg": "^8.11.10",
+    "typescript": "^5.7.3"
+  }
+}

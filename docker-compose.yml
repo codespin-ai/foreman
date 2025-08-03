@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: foreman
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - foreman-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  foreman:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      FOREMAN_SERVER_PORT: 5002
+      FOREMAN_DB_HOST: postgres
+      FOREMAN_DB_PORT: 5432
+      FOREMAN_DB_NAME: foreman
+      FOREMAN_DB_USER: postgres
+      FOREMAN_DB_PASSWORD: postgres
+      UNRESTRICTED_DB_USER: postgres
+      UNRESTRICTED_DB_USER_PASSWORD: postgres
+      RLS_DB_USER: postgres
+      RLS_DB_USER_PASSWORD: postgres
+      JWT_SECRET: development-secret-key-change-in-production
+      RUN_MIGRATIONS: "true"
+      LOG_LEVEL: debug
+    ports:
+      - "5002:5002"
+    networks:
+      - foreman-network
+    volumes:
+      # Mount source for development hot-reload
+      - ./node/packages:/app/node/packages:ro
+      - ./database:/app/database:ro
+    command: npm start
+
+volumes:
+  postgres_data:
+
+networks:
+  foreman-network:
+    driver: bridge

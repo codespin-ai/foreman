@@ -1,8 +1,8 @@
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import { z } from 'zod';
 import { createLogger } from '@codespin/foreman-logger';
 import { getDb } from '@codespin/foreman-db';
-import { authenticate, requirePermission } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth-simple.js';
 import { createRunData } from '../domain/run-data/create-run-data.js';
 import { queryRunData, type QueryRunDataParams } from '../domain/run-data/query-run-data.js';
 import { updateRunDataTags } from '../domain/run-data/update-run-data-tags.js';
@@ -50,7 +50,7 @@ const updateTagsSchema = z.object({
 /**
  * POST /api/v1/runs/:runId/data - Create run data entry
  */
-router.post('/', requirePermission('rundata:write'), async (req, res) => {
+router.post('/', async (req: Request<{ runId: string }>, res) => {
   try {
     const input = createRunDataSchema.parse(req.body);
     const { runId } = req.params;
@@ -84,7 +84,7 @@ router.post('/', requirePermission('rundata:write'), async (req, res) => {
 /**
  * GET /api/v1/runs/:runId/data - Query run data with flexible filtering
  */
-router.get('/', requirePermission('rundata:read'), async (req, res) => {
+router.get('/', async (req: Request<{ runId: string }>, res) => {
   try {
     const { runId } = req.params;
     const params = queryRunDataSchema.parse(req.query);
@@ -134,7 +134,7 @@ router.get('/', requirePermission('rundata:read'), async (req, res) => {
 /**
  * PATCH /api/v1/runs/:runId/data/:dataId/tags - Update tags on a run data entry
  */
-router.patch('/:dataId/tags', requirePermission('rundata:write'), async (req, res) => {
+router.patch('/:dataId/tags', async (req: Request<{ runId: string; dataId: string }>, res) => {
   try {
     const { dataId } = req.params;
     const input = updateTagsSchema.parse(req.body);
@@ -161,7 +161,7 @@ router.patch('/:dataId/tags', requirePermission('rundata:write'), async (req, re
 /**
  * DELETE /api/v1/runs/:runId/data - Delete run data entries
  */
-router.delete('/', requirePermission('rundata:write'), async (req, res) => {
+router.delete('/', async (req: Request<{ runId: string }>, res) => {
   try {
     const { runId } = req.params;
     const { key, id } = req.query as { key?: string; id?: string };

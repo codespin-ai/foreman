@@ -44,39 +44,23 @@ npm run migrate:foreman:latest
 ./start.sh
 ```
 
-## Creating an API Key
+## API Key Format
 
-Before using Foreman, you need to create an API key. Connect to your PostgreSQL database and run:
+Foreman runs in a fully trusted environment behind a firewall. The API key format is:
 
-```sql
--- Generate a secure API key (you'll use this in your client)
--- In production, generate this securely, e.g.: openssl rand -hex 32
-INSERT INTO api_key (
-  id, 
-  org_id, 
-  name, 
-  key_hash, 
-  key_prefix, 
-  permissions, 
-  is_active
-) VALUES (
-  gen_random_uuid(),
-  'my-org', -- Your organization ID
-  'My API Key',
-  '$2b$10$...', -- bcrypt hash of your API key
-  'fmn_dev_', -- First 8 chars of your API key
-  '{"*": true}', -- All permissions
-  true
-);
+```
+fmn_[environment]_[organizationId]_[random]
 ```
 
-To generate the bcrypt hash for your API key:
-```javascript
-const bcrypt = require('bcrypt');
-const apiKey = 'fmn_dev_your_secure_random_key_here';
-const hash = await bcrypt.hash(apiKey, 10);
-console.log(hash); // Use this in key_hash
-```
+Examples:
+- `fmn_dev_myorg_abc123`
+- `fmn_prod_acme_xyz789`
+- `fmn_test_demo_456def`
+
+Since Foreman is fully trusted, there's no database setup required for API keys. The authentication simply:
+- Validates the API key format
+- Extracts the organization ID from the key
+- Grants full access to all operations
 
 ## Basic Usage
 
@@ -89,18 +73,22 @@ npm install @codespin/foreman-client
 ### 2. Initialize the Client
 
 ```typescript
-import { ForemanClient } from '@codespin/foreman-client';
+import { initializeForemanClient, createRun } from '@codespin/foreman-client';
 
-const foreman = new ForemanClient({
-  baseUrl: 'http://localhost:3000',
-  apiKey: 'fmn_dev_your_secure_random_key_here'
-});
+// Initialize client (automatically fetches Redis configuration)
+const foremanConfig = {
+  endpoint: 'http://localhost:3000',
+  apiKey: 'fmn_dev_myorg_abc123'
+};
+
+const client = await initializeForemanClient(foremanConfig);
+const { enqueueTask, createWorker } = client;
 ```
 
 ### 3. Create a Run
 
 ```typescript
-const runResult = await foreman.createRun({
+const runResult = await createRun(foremanConfig, {
   inputData: {
     orderId: 'order-123',
     customerId: 'customer-456'
@@ -120,23 +108,24 @@ const run = runResult.data;
 console.log('Created run:', run.id);
 ```
 
-### 4. Create Tasks
+### 4. Enqueue Tasks (Handles DB + Queue)
 
 ```typescript
-// Create a validation task
-const validationTask = await foreman.createTask({
+// Enqueue a validation task
+const validationTask = await enqueueTask({
   runId: run.id,
   type: 'validate-order',
   inputData: {
     orderId: 'order-123'
-  }
+  },
+  priority: 10
 });
 
-// Create a processing task (child of validation)
-const processingTask = await foreman.createTask({
+// Enqueue a processing task with delay
+const processingTask = await enqueueTask({
   runId: run.id,
-  parentTaskId: validationTask.data.id,
   type: 'process-payment',
+  delay: 5000, // Wait 5 seconds
   inputData: {
     amount: 99.99,
     currency: 'USD'
@@ -144,84 +133,72 @@ const processingTask = await foreman.createTask({
 });
 ```
 
-### 5. Queue Tasks (BullMQ Example)
+### 5. Create Worker (Handles Queue Operations)
 
 ```typescript
-import { Queue } from 'bullmq';
-
-const queue = new Queue('tasks', {
-  connection: {
-    host: 'localhost',
-    port: 6379
-  }
-});
-
-// Queue only the task ID
-await queue.add('process', {
-  taskId: validationTask.data.id
-});
-```
-
-### 6. Process Tasks in Worker
-
-```typescript
-import { Worker } from 'bullmq';
-
-const worker = new Worker('tasks', async (job) => {
-  const { taskId } = job.data;
+// foreman-client handles all BullMQ operations internally
+const worker = await createWorker({
+  'validate-order': async (task) => {
+    console.log('Validating order:', task.inputData);
+    
+    // Perform validation
+    const isValid = validateOrder(task.inputData.orderId);
+    
+    // Store result using run data
+    await createRunData(foremanConfig, task.runId, {
+      taskId: task.id,
+      key: 'order-validation',
+      value: { valid: isValid, timestamp: Date.now() },
+      tags: ['validation', 'order']
+    });
+    
+    return { valid: isValid };
+  },
   
-  // Fetch task data from Foreman
-  const taskResult = await foreman.getTask(taskId);
-  if (!taskResult.success) {
-    throw new Error(`Failed to get task: ${taskResult.error}`);
-  }
-  
-  const task = taskResult.data;
-  
-  // Update task status to running
-  await foreman.updateTask(taskId, {
-    status: 'running',
-    queueJobId: job.id
-  });
-  
-  try {
-    // Process based on task type
-    let result;
-    switch (task.type) {
-      case 'validate-order':
-        result = await validateOrder(task.inputData);
-        break;
-      case 'process-payment':
-        result = await processPayment(task.inputData);
-        break;
-      default:
-        throw new Error(`Unknown task type: ${task.type}`);
+  'process-payment': async (task) => {
+    console.log('Processing payment:', task.inputData);
+    
+    // Query previous validation result
+    const validationData = await queryRunData(foremanConfig, task.runId, {
+      key: 'order-validation'
+    });
+    
+    if (!validationData.success || !validationData.data.data[0]?.value.valid) {
+      throw new Error('Order validation failed');
     }
     
-    // Update task with results
-    await foreman.updateTask(taskId, {
-      status: 'completed',
-      outputData: result
-    });
-    
-    // Store data for other tasks
-    await foreman.createRunData(task.runId, {
-      taskId: taskId,
-      key: `${task.type}_result`,
-      value: result
-    });
-    
-  } catch (error) {
-    // Update task as failed
-    await foreman.updateTask(taskId, {
-      status: 'failed',
-      errorData: {
-        message: error.message,
-        stack: error.stack
-      }
-    });
-    throw error;
+    // Process payment
+    const result = await processPayment(task.inputData);
+    return result;
   }
+}, {
+  concurrency: 5,
+  maxRetries: 3
+});
+
+// Start the worker
+await worker.start();
+console.log('Worker started');
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  await worker.stop();
+  process.exit(0);
+```
+
+### 6. Query Run Data
+
+```typescript
+// Query all validation results
+const validationResults = await queryRunData(foremanConfig, run.id, {
+  tags: ['validation'],
+  sortBy: 'created_at',
+  sortOrder: 'desc'
+});
+
+// Get specific data by key
+const orderData = await queryRunData(foremanConfig, run.id, {
+  key: 'order-validation'
 });
 ```
 
@@ -229,7 +206,7 @@ const worker = new Worker('tasks', async (job) => {
 
 ```typescript
 // After all tasks complete, update the run
-await foreman.updateRun(run.id, {
+await updateRun(foremanConfig, run.id, {
   status: 'completed',
   outputData: {
     processedAt: new Date().toISOString(),

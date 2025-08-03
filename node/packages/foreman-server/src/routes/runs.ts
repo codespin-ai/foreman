@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { createLogger } from '@codespin/foreman-logger';
 import { getDb } from '@codespin/foreman-db';
-import { authenticate, requirePermission } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth-simple.js';
 import { createRun } from '../domain/run/create-run.js';
 import { getRun } from '../domain/run/get-run.js';
 import { updateRun } from '../domain/run/update-run.js';
@@ -38,7 +38,7 @@ const listRunsSchema = z.object({
 /**
  * POST /api/v1/runs - Create a new run
  */
-router.post('/', requirePermission('runs:create'), async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const input = createRunSchema.parse(req.body);
     const db = getDb();
@@ -68,7 +68,7 @@ router.post('/', requirePermission('runs:create'), async (req, res) => {
 /**
  * GET /api/v1/runs/:id - Get a run by ID
  */
-router.get('/:id', requirePermission('runs:read'), async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const db = getDb();
     const result = await getRun(db, req.params.id!, req.auth!.orgId);
@@ -88,7 +88,7 @@ router.get('/:id', requirePermission('runs:read'), async (req, res) => {
 /**
  * PATCH /api/v1/runs/:id - Update a run
  */
-router.patch('/:id', requirePermission('runs:update'), async (req, res) => {
+router.patch('/:id', async (req, res) => {
   try {
     const input = updateRunSchema.parse(req.body);
     const db = getDb();
@@ -114,7 +114,7 @@ router.patch('/:id', requirePermission('runs:update'), async (req, res) => {
 /**
  * GET /api/v1/runs - List runs
  */
-router.get('/', requirePermission('runs:read'), async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const params = listRunsSchema.parse(req.query);
     const db = getDb();

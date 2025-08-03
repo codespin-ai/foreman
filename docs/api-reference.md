@@ -306,15 +306,14 @@ Response:
 }
 ```
 
-## Permissions
+## Authentication
 
-API keys can have the following permissions:
-- `runs:create` - Create runs
-- `runs:read` - Read runs
-- `runs:update` - Update runs
-- `tasks:create` - Create tasks
-- `tasks:read` - Read tasks
-- `tasks:update` - Update tasks
-- `rundata:read` - Read run data
-- `rundata:write` - Write run data
-- `*` - All permissions
+All endpoints require authentication using a Bearer token:
+
+```
+Authorization: Bearer fmn_[environment]_[organizationId]_[random]
+```
+
+Example: `Authorization: Bearer fmn_prod_myorg_abc123`
+
+Since Foreman runs in a fully trusted environment, authenticated users have full access to all operations within their organization.

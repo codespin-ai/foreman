@@ -6,7 +6,6 @@ import type {
   Run, RunDbRow,
   Task, TaskDbRow,
   RunData, RunDataDbRow,
-  ApiKey, ApiKeyDbRow,
   RunStatus, TaskStatus
 } from './types.js';
 
@@ -147,19 +146,3 @@ export function mapRunDataToDb(data: Partial<RunData>): Partial<RunDataDbRow> {
   return dbRow;
 }
 
-/**
- * Map ApiKey from database row to domain type
- */
-export function mapApiKeyFromDb(row: ApiKeyDbRow): ApiKey {
-  return {
-    id: row.id,
-    orgId: row.org_id,
-    name: row.name,
-    keyPrefix: row.key_prefix,
-    permissions: row.permissions as Record<string, boolean>,
-    lastUsedAt: row.last_used_at ?? undefined,
-    expiresAt: row.expires_at ?? undefined,
-    createdAt: row.created_at,
-    isActive: row.is_active
-  };
-}

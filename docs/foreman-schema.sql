@@ -59,50 +59,21 @@ CREATE TABLE run_data (
   org_id VARCHAR(255) NOT NULL,
   key VARCHAR(255) NOT NULL,
   value JSONB NOT NULL,
+  tags TEXT[] NOT NULL DEFAULT '{}',
   metadata JSONB,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  UNIQUE(run_id, key)
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+-- Note: No unique constraint on (run_id, key) - allows multiple entries
 
 CREATE INDEX idx_run_data_run ON run_data(run_id);
 CREATE INDEX idx_run_data_task ON run_data(task_id);
 CREATE INDEX idx_run_data_org ON run_data(org_id);
 CREATE INDEX idx_run_data_key ON run_data(key);
 CREATE INDEX idx_run_data_created ON run_data(created_at DESC);
+CREATE INDEX idx_run_data_tags ON run_data USING GIN(tags);
+CREATE INDEX idx_run_data_key_prefix ON run_data(key text_pattern_ops);
 
--- API key table
-CREATE TABLE api_key (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  org_id VARCHAR(255) NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  key_hash VARCHAR(255) NOT NULL UNIQUE,
-  key_prefix VARCHAR(50) NOT NULL,
-  permissions JSONB NOT NULL DEFAULT '{}',
-  last_used_at TIMESTAMP,
-  expires_at TIMESTAMP,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  is_active BOOLEAN NOT NULL DEFAULT true
-);
-
-CREATE INDEX idx_api_key_org ON api_key(org_id);
-CREATE INDEX idx_api_key_prefix ON api_key(key_prefix);
-CREATE INDEX idx_api_key_active ON api_key(is_active);
-
--- Audit log table
-CREATE TABLE audit_log (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  org_id VARCHAR(255) NOT NULL,
-  entity_type VARCHAR(50) NOT NULL,
-  entity_id UUID NOT NULL,
-  action VARCHAR(50) NOT NULL,
-  changes JSONB,
-  api_key_id VARCHAR(255),
-  ip_address VARCHAR(45),
-  user_agent VARCHAR(500),
-  created_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_audit_org_created ON audit_log(org_id, created_at DESC);
-CREATE INDEX idx_audit_entity ON audit_log(entity_type, entity_id);
-CREATE INDEX idx_audit_api_key ON audit_log(api_key_id);
+-- Note: Authentication is handled via simple API key format validation
+-- No database tables needed for auth in this fully trusted environment

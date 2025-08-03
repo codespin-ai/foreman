@@ -62,18 +62,8 @@ export type RunData = {
   updatedAt: Date;
 };
 
-// API Key domain type
-export type ApiKey = {
-  id: string;
-  orgId: string;
-  name: string;
-  keyPrefix: string;
-  permissions: Record<string, boolean>;
-  lastUsedAt?: Date;
-  expiresAt?: Date;
-  createdAt: Date;
-  isActive: boolean;
-};
+// Note: API keys are validated in middleware without database storage
+// The format is: fmn_[env]_[orgId]_[random]
 
 // Database row types (snake_case)
 export type RunDbRow = {
@@ -127,18 +117,6 @@ export type RunDataDbRow = {
   updated_at: Date;
 };
 
-export type ApiKeyDbRow = {
-  id: string;
-  org_id: string;
-  name: string;
-  key_hash: string;
-  key_prefix: string;
-  permissions: unknown;
-  last_used_at: Date | null;
-  expires_at: Date | null;
-  created_at: Date;
-  is_active: boolean;
-};
 
 // API request/response types
 export type CreateRunInput = {

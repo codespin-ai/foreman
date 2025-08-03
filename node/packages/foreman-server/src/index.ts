@@ -9,6 +9,7 @@ import { getDb, closeDb } from '@codespin/foreman-db';
 import { runsRouter } from './routes/runs.js';
 import { tasksRouter } from './routes/tasks.js';
 import { runDataRouter } from './routes/run-data.js';
+import { configRouter } from './routes/config.js';
 
 // Load environment variables
 config();
@@ -62,6 +63,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/v1/runs', runsRouter);
 app.use('/api/v1/tasks', tasksRouter);
 app.use('/api/v1/runs/:runId/data', runDataRouter);
+app.use('/api/v1/config', configRouter);
 
 // 404 handler
 app.use((_req, res) => {

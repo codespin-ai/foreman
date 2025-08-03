@@ -227,15 +227,16 @@ const task = await foreman.createTask({ /* ... */ });
 
 ### Run Data
 - Key-value storage for inter-task communication
-- Last-write-wins semantics (upsert on conflict)
+- Supports multiple values per key (no unique constraint)
+- Tags array for categorization and filtering
 - Scoped to runs for isolation
-- Tracks which task created/updated each key
+- Tracks which task created each entry
 
-### API Keys
-- Organization-scoped authentication
-- Bcrypt hashed storage
-- Permission-based access control
-- Usage tracking and optional expiration
+### Authentication
+- Simple API key format validation: `fmn_[env]_[orgId]_[random]`
+- No database storage (fully trusted environment)
+- Organization ID extracted from key
+- All authenticated users have full access
 
 ## Common Tasks
 
@@ -291,12 +292,12 @@ await queue.add('process', { taskId: task.data.id });
 const taskData = await foreman.getTask(taskId);
 ```
 
-### Security Considerations
-- Always validate API keys
-- Use organization ID from authenticated context
-- Never trust client-provided org IDs
-- Rate limit API endpoints
-- Log all state changes for audit trail
+### Security Model
+- Fully trusted environment behind firewall
+- Simple API key format validation only
+- Organization ID extracted from API key
+- Rate limiting on endpoints
+- No permission checks - all authenticated users have full access
 
 ## Error Handling
 

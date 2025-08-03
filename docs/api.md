@@ -27,56 +27,64 @@ Key-value storage for sharing data between tasks within a run. Supports tags for
 ### Creating and Executing a Task
 
 ```typescript
-// 1. Create a run
-const run = await foreman.createRun({
+import { initializeForemanClient, createRun } from '@codespin/foreman-client';
+
+// 1. Initialize client
+const config = { 
+  endpoint: 'http://localhost:3000',
+  apiKey: 'fmn_prod_myorg_abc123' 
+};
+const client = await initializeForemanClient(config);
+const { enqueueTask, createWorker } = client;
+
+// 2. Create a run
+const run = await createRun(config, {
   inputData: { orderId: 'order-123' }
 });
 
-// 2. Create a task
-const task = await foreman.createTask({
+// 3. Enqueue task (handles DB + Queue)
+const task = await enqueueTask({
   runId: run.data.id,
   type: 'process-order',
   inputData: { action: 'validate' }
 });
 
-// 3. Queue only the task ID
-await queue.add('work', { taskId: task.data.id });
-
-// 4. In your worker
-const taskData = await foreman.getTask(taskId);
-await foreman.updateTask(taskId, { status: 'running' });
-// ... do work ...
-await foreman.updateTask(taskId, { 
-  status: 'completed',
-  outputData: result 
+// 4. Create worker
+const worker = await createWorker({
+  'process-order': async (task) => {
+    console.log('Processing:', task.inputData);
+    // ... do work ...
+    return { processed: true };
+  }
 });
+
+await worker.start();
 ```
 
 ### Sharing Data Between Tasks
 
 ```typescript
 // Task A stores data with tags
-await foreman.createRunData(runId, {
+await createRunData(config, runId, {
   taskId: taskA.id,
   key: 'customer-data',
   value: { customerId: '123', email: 'user@example.com' },
   tags: ['validated', 'v1.0']
 });
 
-// Task B retrieves latest value for a key
-const data = await foreman.getRunData(runId, 'customer-data');
-
-// Or get all values for a key (if multiple entries exist)
-const allData = await foreman.getAllRunData(runId, 'customer-data');
+// Task B queries data
+const data = await queryRunData(config, runId, {
+  key: 'customer-data'
+});
 
 // Query by tags
-const taggedData = await foreman.queryRunDataByTags(runId, {
+const taggedData = await queryRunData(config, runId, {
   tags: ['validated'],
   tagMode: 'any'
 });
 
 // Query with prefix matching
-const results = await foreman.queryRunData(runId, {
+const results = await queryRunData(config, runId, {
   keyStartsWith: ['customer-'],
   tags: ['v1.0']
 });
@@ -101,10 +109,9 @@ const task = result.data;
 
 Default rate limit: 100 requests per 15 minutes per API key.
 
-## Permissions
+## Security Model
 
-API keys can have the following permissions:
-- `runs:*` - All run operations
-- `tasks:*` - All task operations  
-- `rundata:*` - All run data operations
-- `*` - All permissions
+Foreman runs in a fully trusted environment behind a firewall. All authenticated users have full access to all operations. The API key format (`fmn_[env]_[orgId]_[random]`) is used to:
+- Validate the caller
+- Extract the organization ID
+- Grant full access to all operations for that organization

@@ -12,7 +12,7 @@ The fundamental principle of Foreman is that **queues never store data**. This p
 - **Reduced Memory Usage**: Queue systems only store small task IDs
 - **Better Observability**: Query task data directly from PostgreSQL
 - **Simplified Backup**: All data in one place (PostgreSQL)
-- **Audit Trail**: Complete history with who/what/when
+- **Full State Storage**: Complete task data stored in PostgreSQL
 
 ### 2. RESTful API
 - Standard HTTP verbs (GET, POST, PATCH)
@@ -79,10 +79,10 @@ The fundamental principle of Foreman is that **queues never store data**. This p
 - Last-write-wins semantics
 - Scoped to runs for isolation
 
-### API Keys
-- Organization-scoped authentication
-- Permission-based access control
-- Usage tracking and expiration
+### Authentication
+- Simple API key format validation
+- Keys follow pattern: `fmn_[env]_[orgId]_[random]`
+- No database storage needed in trusted environment
 
 ## Typical Flow
 
@@ -100,36 +100,41 @@ The fundamental principle of Foreman is that **queues never store data**. This p
 ## Integration Pattern
 
 ```typescript
-// 1. Initialize client
-const foreman = new ForemanClient({
-  baseUrl: 'http://localhost:3000',
-  apiKey: 'your-api-key'
-});
+// 1. Initialize client (throws on error)
+const config = {
+  endpoint: 'http://localhost:3000',
+  apiKey: 'fmn_prod_myorg_abc123'
+};
+const client = await initializeForemanClient(config);
+const { enqueueTask, createWorker } = client;
 
 // 2. Create a run
-const run = await foreman.createRun({
+const run = await createRun(config, {
   inputData: { orderId: '123' }
 });
 
-// 3. Create a task
-const task = await foreman.createTask({
+// 3. Enqueue task (handles DB + Queue internally)
+const task = await enqueueTask({
   runId: run.data.id,
   type: 'process-order',
   inputData: { step: 'validate' }
 });
 
-// 4. Queue only the task ID
-await queue.add('process', { taskId: task.data.id });
+// 4. Create worker (no direct queue access needed)
+const worker = await createWorker({
+  'process-order': async (task) => {
+    // Process using task.inputData
+    return { processed: true };
+  }
+});
 
-// 5. In your worker
-const job = await queue.getJob();
-const taskData = await foreman.getTask(job.data.taskId);
-// Process using taskData.data.inputData
+await worker.start();
 ```
 
 ## Security
 
-- API key authentication with bcrypt hashing
+- Fully trusted environment behind firewall
+- Simple API key format validation (`fmn_[env]_[orgId]_[random]`)
 - Organization isolation at database level
 - Rate limiting on API endpoints
 - Request size limits
@@ -147,6 +152,6 @@ const taskData = await foreman.getTask(job.data.taskId);
 - Health check endpoint
 - Request logging with duration tracking
 - Error logging with context
-- Audit log for all state changes
+- Task status and metrics tracking
 
 

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { createLogger } from '@codespin/foreman-logger';
 import { getDb } from '@codespin/foreman-db';
-import { authenticate, requirePermission } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth-simple.js';
 import { createTask } from '../domain/task/create-task.js';
 import { getTask } from '../domain/task/get-task.js';
 import { updateTask } from '../domain/task/update-task.js';
@@ -34,7 +34,7 @@ const updateTaskSchema = z.object({
 /**
  * POST /api/v1/tasks - Create a new task
  */
-router.post('/', requirePermission('tasks:create'), async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const input = createTaskSchema.parse(req.body);
     const db = getDb();
@@ -67,7 +67,7 @@ router.post('/', requirePermission('tasks:create'), async (req, res) => {
 /**
  * GET /api/v1/tasks/:id - Get a task by ID
  */
-router.get('/:id', requirePermission('tasks:read'), async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const db = getDb();
     const result = await getTask(db, req.params.id!, req.auth!.orgId);
@@ -87,7 +87,7 @@ router.get('/:id', requirePermission('tasks:read'), async (req, res) => {
 /**
  * PATCH /api/v1/tasks/:id - Update a task
  */
-router.patch('/:id', requirePermission('tasks:update'), async (req, res) => {
+router.patch('/:id', async (req, res) => {
   try {
     const input = updateTaskSchema.parse(req.body);
     const db = getDb();

@@ -79,48 +79,10 @@ export const up = async (knex) => {
     table.index(['created_at']);
   });
 
-  // API keys table for authentication
-  await knex.schema.createTable('api_key', (table) => {
-    table.uuid('id').primary();
-    table.string('org_id', 255).notNullable();
-    table.string('name', 255).notNullable();
-    table.string('key_hash', 255).notNullable().unique();
-    table.string('key_prefix', 50).notNullable(); // First 8 chars for identification
-    table.jsonb('permissions').notNullable().defaultTo('{}');
-    table.timestamp('last_used_at');
-    table.timestamp('expires_at');
-    table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
-    table.boolean('is_active').notNullable().defaultTo(true);
-    
-    // Indexes
-    table.index(['org_id']);
-    table.index(['key_prefix']);
-    table.index(['is_active']);
-  });
 
-  // Audit log table
-  await knex.schema.createTable('audit_log', (table) => {
-    table.uuid('id').primary();
-    table.string('org_id', 255).notNullable();
-    table.string('entity_type', 50).notNullable(); // 'run', 'task', 'run_data'
-    table.uuid('entity_id').notNullable();
-    table.string('action', 50).notNullable(); // 'create', 'update', 'delete'
-    table.jsonb('changes'); // JSON diff of changes
-    table.string('api_key_id', 255);
-    table.string('ip_address', 45);
-    table.string('user_agent', 500);
-    table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
-    
-    // Indexes
-    table.index(['org_id', 'created_at']);
-    table.index(['entity_type', 'entity_id']);
-    table.index(['api_key_id']);
-  });
 };
 
 export const down = async (knex) => {
-  await knex.schema.dropTableIfExists('audit_log');
-  await knex.schema.dropTableIfExists('api_key');
   await knex.schema.dropTableIfExists('run_data');
   await knex.schema.dropTableIfExists('task');
   await knex.schema.dropTableIfExists('run');

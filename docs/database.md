@@ -8,7 +8,7 @@ Foreman uses PostgreSQL as its primary data store, following the principle that 
 
 1. **Single Source of Truth**: All task and run data stored in PostgreSQL
 2. **Multi-tenancy**: Every table has `org_id` for organization isolation
-3. **Audit Trail**: Timestamps and audit log for all changes
+3. **Timestamps**: Created/updated timestamps for tracking
 4. **Flexible Storage**: JSONB for variable data structures
 5. **Referential Integrity**: Foreign keys with appropriate cascades
 
@@ -19,8 +19,6 @@ Foreman uses PostgreSQL as its primary data store, following the principle that 
 1. **run** - Top-level execution contexts
 2. **task** - Individual units of work
 3. **run_data** - Key-value storage for inter-task communication
-4. **api_key** - Authentication and authorization
-5. **audit_log** - Change tracking
 
 ### Relationships
 
@@ -175,68 +173,10 @@ CREATE TRIGGER update_run_data_updated_at
 - `GIN index on tags`: Efficient array containment queries
 - `text_pattern_ops on key`: Efficient prefix matching (LIKE 'prefix%')
 
-### API Key Table
+### Authentication Note
 
-Stores hashed API keys for authentication.
+Foreman uses simplified authentication suitable for a fully trusted environment. API keys follow the format `fmn_[env]_[orgId]_[random]` and are validated by the middleware without database lookups. The organization ID is extracted directly from the API key.
 
-```sql
-CREATE TABLE api_key (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  org_id VARCHAR(255) NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  key_hash VARCHAR(255) NOT NULL UNIQUE,
-  key_prefix VARCHAR(50) NOT NULL,
-  permissions JSONB NOT NULL DEFAULT '{}',
-  last_used_at TIMESTAMP,
-  expires_at TIMESTAMP,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  is_active BOOLEAN NOT NULL DEFAULT true
-);
-
--- Indexes
-CREATE INDEX idx_api_key_org ON api_key(org_id);
-CREATE INDEX idx_api_key_prefix ON api_key(key_prefix);
-CREATE INDEX idx_api_key_active ON api_key(is_active) WHERE is_active = true;
-CREATE INDEX idx_api_key_expires ON api_key(expires_at) 
-  WHERE expires_at IS NOT NULL AND is_active = true;
-```
-
-**Column Notes:**
-- `key_hash`: Bcrypt hash of the actual API key
-- `key_prefix`: First 8 characters for key identification
-- `permissions`: JSON object with permission flags
-- `expires_at`: Optional expiration timestamp
-
-### Audit Log Table
-
-Tracks all changes for compliance and debugging.
-
-```sql
-CREATE TABLE audit_log (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  org_id VARCHAR(255) NOT NULL,
-  entity_type VARCHAR(50) NOT NULL 
-    CHECK (entity_type IN ('run', 'task', 'run_data', 'api_key')),
-  entity_id UUID NOT NULL,
-  action VARCHAR(50) NOT NULL 
-    CHECK (action IN ('create', 'update', 'delete')),
-  changes JSONB,
-  api_key_id VARCHAR(255),
-  ip_address VARCHAR(45),
-  user_agent VARCHAR(500),
-  created_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
--- Indexes
-CREATE INDEX idx_audit_org_created ON audit_log(org_id, created_at DESC);
-CREATE INDEX idx_audit_entity ON audit_log(entity_type, entity_id);
-CREATE INDEX idx_audit_api_key ON audit_log(api_key_id) WHERE api_key_id IS NOT NULL;
-CREATE INDEX idx_audit_created ON audit_log(created_at DESC);
-
--- Partitioning by month (optional for large deployments)
--- CREATE TABLE audit_log_2024_01 PARTITION OF audit_log
---   FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
-```
 
 ## Design Decisions
 

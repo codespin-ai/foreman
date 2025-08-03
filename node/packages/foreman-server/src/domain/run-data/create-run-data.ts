@@ -40,20 +40,14 @@ export async function createRunData(
       
       const id = uuidv4();
       
-      // Upsert run data (last write wins)
+      // Insert run data (allows multiple entries per key)
       const row = await t.one<RunDataDbRow>(
         `INSERT INTO run_data (
-          id, run_id, task_id, org_id, key, value, metadata, created_at, updated_at
+          id, run_id, task_id, org_id, key, value, tags, metadata, created_at, updated_at
         )
         VALUES (
-          $(id), $(runId), $(taskId), $(orgId), $(key), $(value), $(metadata), NOW(), NOW()
+          $(id), $(runId), $(taskId), $(orgId), $(key), $(value), $(tags), $(metadata), NOW(), NOW()
         )
-        ON CONFLICT (run_id, key) 
-        DO UPDATE SET
-          task_id = $(taskId),
-          value = $(value),
-          metadata = $(metadata),
-          updated_at = NOW()
         RETURNING *`,
         {
           id,
@@ -62,6 +56,7 @@ export async function createRunData(
           orgId,
           key: input.key,
           value: input.value as Record<string, unknown>,
+          tags: input.tags || [],
           metadata: input.metadata || null
         }
       );

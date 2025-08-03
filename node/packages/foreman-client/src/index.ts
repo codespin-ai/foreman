@@ -92,6 +92,7 @@ export interface RunData {
   orgId: string;
   key: string;
   value: unknown;
+  tags: string[];
   metadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -101,7 +102,33 @@ export interface CreateRunDataInput {
   taskId: string;
   key: string;
   value: unknown;
+  tags?: string[];
   metadata?: Record<string, unknown>;
+}
+
+export interface QueryRunDataParams {
+  // Key filters
+  key?: string;
+  keys?: string[];
+  keyStartsWith?: string[];
+  keyPattern?: string;
+  
+  // Tag filters
+  tags?: string[];
+  tagStartsWith?: string[];
+  tagMode?: 'any' | 'all';
+  
+  // Options
+  includeAll?: boolean;
+  limit?: number;
+  offset?: number;
+  sortBy?: 'created_at' | 'updated_at' | 'key';
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface UpdateRunDataTagsInput {
+  add?: string[];
+  remove?: string[];
 }
 
 /**
@@ -179,6 +206,29 @@ export class ForemanClient {
   }
 
   /**
+   * Build query string from parameters
+   */
+  private buildQueryString(params: Record<string, any>): string {
+    const searchParams = new URLSearchParams();
+    
+    for (const [key, value] of Object.entries(params)) {
+      if (value === undefined || value === null) continue;
+      
+      if (Array.isArray(value)) {
+        // Join arrays with commas
+        searchParams.append(key, value.join(','));
+      } else if (typeof value === 'object') {
+        searchParams.append(key, JSON.stringify(value));
+      } else {
+        searchParams.append(key, String(value));
+      }
+    }
+    
+    const queryString = searchParams.toString();
+    return queryString ? `?${queryString}` : '';
+  }
+
+  /**
    * Run operations
    */
   async createRun(input: CreateRunInput): Promise<Result<Run, Error>> {
@@ -230,10 +280,41 @@ export class ForemanClient {
   }
 
   async getRunData(runId: string, key: string): Promise<Result<RunData, Error>> {
-    return this.request<RunData>('GET', `/api/v1/runs/${runId}/data/${key}`);
+    // Get the latest value for a specific key
+    const result = await this.queryRunData(runId, { key, limit: 1 });
+    if (!result.success) return result;
+    
+    if (result.data.data.length === 0) {
+      return failure(new Error(`Run data not found: ${runId}/${key}`));
+    }
+    
+    return success(result.data.data[0]!);
   }
 
-  async listRunData(runId: string): Promise<Result<{ items: RunData[] }, Error>> {
-    return this.request<{ items: RunData[] }>('GET', `/api/v1/runs/${runId}/data`);
+  async queryRunData(runId: string, params?: QueryRunDataParams): Promise<Result<{ data: RunData[]; pagination: { limit: number; offset: number; total: number } }, Error>> {
+    const queryString = this.buildQueryString(params || {});
+    return this.request<{ data: RunData[]; pagination: { limit: number; offset: number; total: number } }>('GET', `/api/v1/runs/${runId}/data${queryString}`);
+  }
+
+  async updateRunDataTags(runId: string, dataId: string, input: UpdateRunDataTagsInput): Promise<Result<RunData, Error>> {
+    return this.request<RunData>('PATCH', `/api/v1/runs/${runId}/data/${dataId}/tags`, input);
+  }
+
+  async deleteRunData(runId: string, options: { key?: string; id?: string }): Promise<Result<{ deleted: number }, Error>> {
+    const queryString = this.buildQueryString(options);
+    return this.request<{ deleted: number }>('DELETE', `/api/v1/runs/${runId}/data${queryString}`);
+  }
+
+  // Convenience methods
+  async getAllRunData(runId: string, key: string): Promise<Result<RunData[], Error>> {
+    const result = await this.queryRunData(runId, { key, includeAll: true });
+    if (!result.success) return result;
+    return success(result.data.data);
+  }
+
+  async queryRunDataByTags(runId: string, options: { tags?: string[]; tagStartsWith?: string[]; tagMode?: 'any' | 'all' }): Promise<Result<RunData[], Error>> {
+    const result = await this.queryRunData(runId, options);
+    if (!result.success) return result;
+    return success(result.data.data);
   }
 }

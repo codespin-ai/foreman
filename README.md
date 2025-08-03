@@ -7,7 +7,7 @@ A workflow orchestration engine with REST API, built with TypeScript. Foreman pr
 - 🏢 **Multi-tenant Runs** - Isolated execution contexts per organization
 - 📋 **Task Management** - Queue-agnostic task orchestration
 - 💾 **PostgreSQL Storage** - All data stored in PostgreSQL, queues only contain IDs
-- 🔄 **Run Data Storage** - Key-value storage for inter-task communication
+- 🔄 **Run Data Storage** - Key-value storage with tags and multi-value support for inter-task communication
 - 🚀 **REST API** - Simple HTTP API for all operations
 - 📊 **Status Tracking** - Complete execution history and status tracking
 
@@ -82,9 +82,10 @@ The REST API will be available at `http://localhost:3000`.
 
 ### Run Data
 
-- `POST /api/v1/runs/:runId/data` - Store data
-- `GET /api/v1/runs/:runId/data/:key` - Get specific data
-- `GET /api/v1/runs/:runId/data` - List all data for a run
+- `POST /api/v1/runs/:runId/data` - Store data with optional tags
+- `GET /api/v1/runs/:runId/data` - Query data with flexible filtering (by key, tags, prefix)
+- `PATCH /api/v1/runs/:runId/data/:dataId/tags` - Update tags on existing data
+- `DELETE /api/v1/runs/:runId/data` - Delete data by key or ID
 
 ## Client Usage
 
@@ -101,25 +102,39 @@ const foreman = new ForemanClient({
 // Initialize your queue (BullMQ example)
 const queue = new Queue('tasks');
 
-// Create a task with data in Foreman
+// Create a run
+const run = await foreman.createRun({
+  inputData: { workflowType: 'order-processing' }
+});
+
+// Create a task
 const task = await foreman.createTask({
   type: 'process-order',
-  runId: 'run-123',
-  data: {
+  runId: run.data.id,
+  inputData: {
     orderId: 'order-456',
-    items: [...]
+    items: [/* ... */]
   }
+});
+
+// Store data with tags
+await foreman.createRunData(run.data.id, {
+  taskId: task.data.id,
+  key: 'order-status',
+  value: { status: 'processing', timestamp: Date.now() },
+  tags: ['order-456', 'processing']
+});
+
+// Query data by tags
+const results = await foreman.queryRunData(run.data.id, {
+  tags: ['order-456'],
+  keyStartsWith: ['order-']
 });
 
 // Queue only the task ID
 await queue.add('process', { 
-  taskId: task.id 
+  taskId: task.data.id 
 });
-
-// In your worker
-const job = await queue.getJob();
-const taskData = await foreman.getTask(job.data.taskId);
-// Process using taskData.data
 ```
 
 ## Development

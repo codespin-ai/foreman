@@ -28,7 +28,9 @@ export async function getRunData(
        JOIN run r ON r.id = rd.run_id
        WHERE rd.run_id = $(runId) 
          AND rd.key = $(key)
-         AND r.org_id = $(orgId)`,
+         AND r.org_id = $(orgId)
+       ORDER BY rd.created_at DESC
+       LIMIT 1`,
       { runId, key, orgId }
     );
     

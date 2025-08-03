@@ -55,6 +55,13 @@ export class HttpClient {
     });
   }
 
+  async patch<T = any>(path: string, body?: any): Promise<T> {
+    return this.request<T>(path, {
+      method: 'PATCH',
+      body: body ? JSON.stringify(body) : undefined
+    });
+  }
+
   async delete<T = any>(path: string): Promise<T> {
     return this.request<T>(path, { method: 'DELETE' });
   }

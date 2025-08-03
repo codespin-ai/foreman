@@ -20,7 +20,7 @@ A run is a top-level execution context that contains tasks.
 Tasks are individual units of work within a run. Tasks can have parent-child relationships.
 
 ### Run Data
-Key-value storage for sharing data between tasks within a run.
+Key-value storage for sharing data between tasks within a run. Supports tags for categorization and allows multiple entries with the same key.
 
 ## Common Workflows
 
@@ -55,15 +55,31 @@ await foreman.updateTask(taskId, {
 ### Sharing Data Between Tasks
 
 ```typescript
-// Task A stores data
+// Task A stores data with tags
 await foreman.createRunData(runId, {
   taskId: taskA.id,
   key: 'customer-data',
-  value: { customerId: '123', email: 'user@example.com' }
+  value: { customerId: '123', email: 'user@example.com' },
+  tags: ['validated', 'v1.0']
 });
 
-// Task B retrieves data
+// Task B retrieves latest value for a key
 const data = await foreman.getRunData(runId, 'customer-data');
+
+// Or get all values for a key (if multiple entries exist)
+const allData = await foreman.getAllRunData(runId, 'customer-data');
+
+// Query by tags
+const taggedData = await foreman.queryRunDataByTags(runId, {
+  tags: ['validated'],
+  tagMode: 'any'
+});
+
+// Query with prefix matching
+const results = await foreman.queryRunData(runId, {
+  keyStartsWith: ['customer-'],
+  tags: ['v1.0']
+});
 ```
 
 ## Error Handling

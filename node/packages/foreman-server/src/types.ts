@@ -56,6 +56,7 @@ export type RunData = {
   orgId: string;
   key: string;
   value: unknown;
+  tags: string[];
   metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
@@ -120,6 +121,7 @@ export type RunDataDbRow = {
   org_id: string;
   key: string;
   value: unknown;
+  tags: string[];
   metadata: unknown | null;
   created_at: Date;
   updated_at: Date;
@@ -174,6 +176,7 @@ export type CreateRunDataInput = {
   taskId: string;
   key: string;
   value: unknown;
+  tags?: string[];
   metadata?: Record<string, unknown>;
 };
 

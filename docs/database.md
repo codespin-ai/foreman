@@ -123,7 +123,7 @@ CREATE INDEX idx_task_queue_job ON task(queue_job_id) WHERE queue_job_id IS NOT 
 
 ### Run Data Table
 
-Key-value storage for sharing data between tasks within a run.
+Key-value storage for sharing data between tasks within a run. Supports tags for categorization and allows multiple entries with the same key.
 
 ```sql
 CREATE TABLE run_data (
@@ -133,14 +133,13 @@ CREATE TABLE run_data (
   org_id VARCHAR(255) NOT NULL,
   key VARCHAR(255) NOT NULL,
   value JSONB NOT NULL,
+  tags TEXT[] NOT NULL DEFAULT '{}',
   metadata JSONB,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- Constraints
-ALTER TABLE run_data ADD CONSTRAINT uniq_run_data_run_key 
-  UNIQUE (run_id, key);
+-- Note: No unique constraint on (run_id, key) - allows multiple entries
 
 -- Indexes
 CREATE INDEX idx_run_data_run ON run_data(run_id);
@@ -148,6 +147,8 @@ CREATE INDEX idx_run_data_task ON run_data(task_id);
 CREATE INDEX idx_run_data_org ON run_data(org_id);
 CREATE INDEX idx_run_data_key ON run_data(key);
 CREATE INDEX idx_run_data_created ON run_data(created_at DESC);
+CREATE INDEX idx_run_data_tags ON run_data USING GIN(tags);
+CREATE INDEX idx_run_data_key_prefix ON run_data(key text_pattern_ops);
 
 -- Trigger for updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -164,10 +165,15 @@ CREATE TRIGGER update_run_data_updated_at
 ```
 
 **Column Notes:**
-- `key`: Unique within a run (last write wins)
+- `key`: Can have multiple entries per run (no unique constraint)
 - `task_id`: Which task created/updated this data
 - `value`: Arbitrary JSON data
+- `tags`: Array of text tags for categorization and filtering
 - `updated_at`: Automatically updated on changes
+
+**Index Notes:**
+- `GIN index on tags`: Efficient array containment queries
+- `text_pattern_ops on key`: Efficient prefix matching (LIKE 'prefix%')
 
 ### API Key Table
 
@@ -291,11 +297,37 @@ LEFT JOIN task t ON t.run_id = r.id
 WHERE r.id = $1
 GROUP BY r.id;
 
--- Get latest run data
+-- Get latest run data per key
 SELECT DISTINCT ON (key) * 
 FROM run_data 
 WHERE run_id = $1
-ORDER BY key, updated_at DESC;
+ORDER BY key, created_at DESC;
+
+-- Get all run data with specific tags
+SELECT * FROM run_data
+WHERE run_id = $1
+  AND tags @> ARRAY['production', 'v1.0']  -- Has ALL tags
+ORDER BY created_at DESC;
+
+-- Get run data with any of the specified tags
+SELECT * FROM run_data
+WHERE run_id = $1
+  AND tags && ARRAY['sensor-1', 'sensor-2']  -- Has ANY tag
+ORDER BY created_at DESC;
+
+-- Get run data by key prefix
+SELECT * FROM run_data
+WHERE run_id = $1
+  AND key LIKE 'sensor.temp%'
+ORDER BY created_at DESC;
+
+-- Get run data with tag prefix matching
+SELECT * FROM run_data
+WHERE run_id = $1
+  AND EXISTS (
+    SELECT 1 FROM unnest(tags) AS tag 
+    WHERE tag LIKE '2024-03%'
+  );
 ```
 
 ### Performance Queries

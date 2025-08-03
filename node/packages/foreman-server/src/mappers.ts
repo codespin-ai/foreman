@@ -121,6 +121,7 @@ export function mapRunDataFromDb(row: RunDataDbRow): RunData {
     orgId: row.org_id,
     key: row.key,
     value: row.value,
+    tags: row.tags || [],
     metadata: row.metadata as Record<string, unknown> | undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at

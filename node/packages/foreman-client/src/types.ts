@@ -2,6 +2,13 @@
  * Foreman client types
  */
 
+export type Logger = {
+  debug(message: string, ...args: unknown[]): void;
+  info(message: string, ...args: unknown[]): void;
+  warn(message: string, ...args: unknown[]): void;
+  error(message: string, ...args: unknown[]): void;
+};
+
 export type ForemanConfig = {
   endpoint: string;
   apiKey?: string;
@@ -10,6 +17,7 @@ export type ForemanConfig = {
     taskQueue?: string;
     resultQueue?: string;
   };
+  logger?: Logger;
 };
 
 export type RedisConfig = {
@@ -44,3 +52,4 @@ export type WorkerControls = {
   pause: () => Promise<void>;
   resume: () => Promise<void>;
 };
+

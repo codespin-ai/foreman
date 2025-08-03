@@ -1,6 +1,6 @@
 {
   "name": "@codespin/foreman-client",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Client library for Foreman API",
   "type": "module",
   "main": "./dist/index.js",
@@ -15,8 +15,6 @@
     "lint:fix": "eslint src --ext .ts --fix"
   },
   "dependencies": {
-    "@codespin/foreman-core": "file:../foreman-core",
-    "@codespin/foreman-logger": "file:../foreman-logger",
     "bullmq": "^5.34.3"
   },
   "devDependencies": {

@@ -2,7 +2,7 @@
  * Foreman API functions
  */
 
-import { Result } from '@codespin/foreman-core';
+import { Result } from './result.js';
 import type { ForemanConfig } from './types.js';
 import type {
   Run, CreateRunInput, UpdateRunInput,

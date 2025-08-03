@@ -2,12 +2,10 @@
  * Configuration fetching functions
  */
 
-import { Result, success, failure } from '@codespin/foreman-core';
-import { createLogger } from '@codespin/foreman-logger';
-import type { ForemanConfig, RedisConfig, QueueConfig } from './types.js';
-import { httpRequest } from './http-client.js';
 
-const logger = createLogger('foreman-client:config');
+import { Result, success, failure } from './result.js';
+import type { ForemanConfig, RedisConfig, QueueConfig, Logger } from './types.js';
+import { httpRequest } from './http-client.js';
 
 // Cache configuration for 5 minutes
 const CONFIG_CACHE_TTL = 5 * 60 * 1000;
@@ -20,7 +18,8 @@ let configCache: {
  * Fetch Redis configuration from Foreman server
  */
 export async function getRedisConfig(
-  config: ForemanConfig
+  config: ForemanConfig,
+  logger: Logger,
 ): Promise<Result<RedisConfig, Error>> {
   try {
     // Check cache
@@ -62,7 +61,8 @@ export async function getRedisConfig(
  * Fetch queue names configuration from Foreman server
  */
 export async function getQueueConfig(
-  config: ForemanConfig
+  config: ForemanConfig,
+  logger: Logger,
 ): Promise<Result<QueueConfig, Error>> {
   try {
     // Check cache
@@ -103,7 +103,9 @@ export async function getQueueConfig(
 /**
  * Clear configuration cache
  */
-export function clearConfigCache(): void {
+export function clearConfigCache(logger: Logger): void {
   configCache = {};
   logger.debug('Configuration cache cleared');
 }
+
+

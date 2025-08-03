@@ -2,12 +2,10 @@
  * Worker creation and management using BullMQ
  */
 
-import { Worker, Job } from 'bullmq';
-import { createLogger } from '@codespin/foreman-logger';
-import type { ForemanConfig, RedisConfig, QueueConfig, TaskHandler, WorkerOptions, WorkerControls } from './types.js';
-import { updateTask } from './api.js';
 
-const logger = createLogger('foreman-client:worker');
+import { Worker, Job } from 'bullmq';
+import type { ForemanConfig, RedisConfig, QueueConfig, TaskHandler, WorkerOptions, WorkerControls, Logger } from './types.js';
+import { updateTask } from './api.js';
 
 /**
  * Create a worker that processes tasks
@@ -18,6 +16,7 @@ export async function createWorker(params: {
   queueConfig: QueueConfig;
   handlers: Record<string, TaskHandler>;
   options?: WorkerOptions;
+  logger: Logger;
 }): Promise<WorkerControls> {
   const connection = {
     host: params.redisConfig.host,
@@ -31,7 +30,7 @@ export async function createWorker(params: {
     async (job: Job) => {
       const { taskId, type, runId, inputData, metadata } = job.data;
       
-      logger.info('Processing task', { taskId, type, runId });
+      params.logger.info('Processing task', { taskId, type, runId });
       
       try {
         // Update task status to running
@@ -61,11 +60,11 @@ export async function createWorker(params: {
           outputData: result
         });
         
-        logger.info('Task completed', { taskId, type });
+        params.logger.info('Task completed', { taskId, type });
         return result;
         
       } catch (error) {
-        logger.error('Task failed', { taskId, type, error });
+        params.logger.error('Task failed', { taskId, type, error });
         
         // Update task as failed or retrying
         const isLastAttempt = job.attemptsMade >= (params.options?.maxRetries || 3);
@@ -86,22 +85,22 @@ export async function createWorker(params: {
 
   // Set up event handlers
   worker.on('completed', (job) => {
-    logger.debug('Job completed', { jobId: job.id, taskId: job.data.taskId });
+    params.logger.debug('Job completed', { jobId: job.id, taskId: job.data.taskId });
   });
 
   worker.on('failed', (job, err) => {
-    logger.error('Job failed', { jobId: job?.id, taskId: job?.data.taskId, error: err });
+    params.logger.error('Job failed', { jobId: job?.id, taskId: job?.data.taskId, error: err });
   });
 
   worker.on('error', (err) => {
-    logger.error('Worker error', { error: err });
+    params.logger.error('Worker error', { error: err });
   });
 
   // Return control functions
   return {
     start: async () => {
       await worker.run();
-      logger.info('Worker started', { 
+      params.logger.info('Worker started', { 
         queue: params.queueConfig.taskQueue,
         concurrency: params.options?.concurrency || 5 
       });
@@ -109,17 +108,17 @@ export async function createWorker(params: {
     
     stop: async () => {
       await worker.close();
-      logger.info('Worker stopped');
+      params.logger.info('Worker stopped');
     },
     
     pause: async () => {
       await worker.pause();
-      logger.info('Worker paused');
+      params.logger.info('Worker paused');
     },
     
     resume: async () => {
       await worker.resume();
-      logger.info('Worker resumed');
+      params.logger.info('Worker resumed');
     }
   };
 }
@@ -134,6 +133,7 @@ export async function createTaskWorker(params: {
   taskType: string;
   handler: TaskHandler;
   options?: WorkerOptions;
+  logger: Logger;
 }): Promise<WorkerControls> {
   return createWorker({
     foremanConfig: params.foremanConfig,
@@ -142,6 +142,30 @@ export async function createTaskWorker(params: {
     handlers: {
       [params.taskType]: params.handler
     },
-    options: params.options
+    options: params.options,
+    logger: params.logger
   });
 }
+
+/**
+ * Create a worker for multiple task types
+ */
+export async function createMultiTaskWorker(params: {
+  foremanConfig: ForemanConfig;
+  redisConfig: RedisConfig;
+  queueConfig: QueueConfig;
+  handlers: Record<string, TaskHandler>;
+  options?: WorkerOptions;
+  logger: Logger;
+}): Promise<WorkerControls> {
+  return createWorker({
+    foremanConfig: params.foremanConfig,
+    redisConfig: params.redisConfig,
+    queueConfig: params.queueConfig,
+    handlers: params.handlers,
+    options: params.options,
+    logger: params.logger
+  });
+}
+
+

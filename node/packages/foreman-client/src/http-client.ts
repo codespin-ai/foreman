@@ -2,7 +2,7 @@
  * HTTP client utilities
  */
 
-import { Result, success, failure } from '@codespin/foreman-core';
+import { Result, success, failure } from './result.js';
 
 export type HttpRequestOptions = {
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE';

@@ -3,13 +3,10 @@
  */
 
 import { Queue } from 'bullmq';
-import { Result, success, failure } from '@codespin/foreman-core';
-import { createLogger } from '@codespin/foreman-logger';
-import type { ForemanConfig, RedisConfig, QueueConfig } from './types.js';
+import { Result, success, failure } from './result.js';
+import type { ForemanConfig, RedisConfig, QueueConfig, Logger } from './types.js';
 import type { CreateTaskInput } from './api-types.js';
 import { createTask } from './api.js';
-
-const logger = createLogger('foreman-client:queue');
 
 // Cache queue instances
 const queueCache: Map<string, Queue> = new Map();
@@ -19,7 +16,8 @@ const queueCache: Map<string, Queue> = new Map();
  */
 async function getQueue(
   queueName: string,
-  redisConfig: RedisConfig
+  redisConfig: RedisConfig,
+  logger: Logger,
 ): Promise<Queue> {
   const cacheKey = `${queueName}:${redisConfig.host}:${redisConfig.port}`;
   
@@ -51,6 +49,7 @@ export async function enqueueTask(params: {
     priority?: number;
     delay?: number;
   };
+  logger: Logger;
 }): Promise<Result<{ taskId: string }, Error>> {
   try {
     // First, create the task in Foreman DB
@@ -62,7 +61,7 @@ export async function enqueueTask(params: {
     const taskId = createResult.data.id;
     
     // Then enqueue to BullMQ
-    const queue = await getQueue(params.queueConfig.taskQueue, params.redisConfig);
+    const queue = await getQueue(params.queueConfig.taskQueue, params.redisConfig, params.logger);
     
     const job = await queue.add(
       params.task.type,
@@ -86,7 +85,7 @@ export async function enqueueTask(params: {
       }
     );
     
-    logger.info('Task enqueued', { 
+    params.logger.info('Task enqueued', { 
       taskId, 
       jobId: job.id, 
       type: params.task.type,
@@ -95,7 +94,7 @@ export async function enqueueTask(params: {
     
     return success({ taskId });
   } catch (error) {
-    logger.error('Failed to enqueue task', { error, task: params.task });
+    params.logger.error('Failed to enqueue task', { error, task: params.task });
     return failure(error as Error);
   }
 }
@@ -111,6 +110,7 @@ export async function enqueueTasks(params: {
     priority?: number;
     delay?: number;
   }>;
+  logger: Logger;
 }): Promise<Result<{ taskIds: string[] }, Error>> {
   const taskIds: string[] = [];
   const errors: Error[] = [];
@@ -124,7 +124,8 @@ export async function enqueueTasks(params: {
         foremanConfig: params.foremanConfig,
         redisConfig: params.redisConfig,
         queueConfig: params.queueConfig,
-        task
+        task,
+        logger: params.logger,
       }))
     );
     
@@ -138,23 +139,32 @@ export async function enqueueTasks(params: {
   }
   
   if (errors.length > 0) {
-    logger.error('Some tasks failed to enqueue', { 
+    params.logger.error('Some tasks failed to enqueue', { 
       successCount: taskIds.length, 
       errorCount: errors.length 
     });
     return failure(new Error(`Failed to enqueue ${errors.length} tasks`));
   }
   
-  logger.info('All tasks enqueued', { count: taskIds.length });
+  params.logger.info('All tasks enqueued', { count: taskIds.length });
   return success({ taskIds });
 }
 
 /**
  * Close all queue connections
  */
-export async function closeQueues(): Promise<void> {
+export async function closeQueues(logger: Logger): Promise<void> {
   const queues = Array.from(queueCache.values());
   await Promise.all(queues.map(queue => queue.close()));
   queueCache.clear();
   logger.debug('All queue connections closed');
 }
+
+/**
+ * Clear queue cache
+ */
+export function clearQueueCache(logger: Logger): void {
+  queueCache.clear();
+  logger.debug('Queue cache cleared');
+}
+

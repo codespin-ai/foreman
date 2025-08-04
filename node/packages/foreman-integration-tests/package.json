@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@codespin/foreman-client": "file:../foreman-client",
+    "@codespin/foreman-test-utils": "file:../foreman-test-utils",
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {

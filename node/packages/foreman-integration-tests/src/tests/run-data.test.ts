@@ -1,335 +1,278 @@
 import { expect } from 'chai';
-import { client } from '../index.js';
+import { testDb, client } from '../test-setup.js';
 
 describe('Run Data API', () => {
   let runId: string;
   let taskId: string;
 
   beforeEach(async () => {
-    // Create a run and task for testing
-    const run = await client.post('/runs', {
-      inputData: { test: true }
+    await testDb.truncateAllTables();
+    
+    // Create a run for run data tests
+    const runResponse = await client.post('/api/v1/runs', {
+      inputData: { type: 'test-workflow' }
     });
-    runId = run.id;
+    runId = runResponse.data.id;
 
-    const task = await client.post('/tasks', {
+    // Create a task for run data tests
+    const taskResponse = await client.post('/api/v1/tasks', {
       runId,
       type: 'test-task',
-      data: {}
+      inputData: {}
     });
-    taskId = task.id;
+    taskId = taskResponse.data.id;
   });
 
-  describe('POST /runs/:id/data', () => {
-    it('should write run data', async () => {
-      const data = await client.post(`/runs/${runId}/data`, {
-        key: 'test-key',
-        value: { message: 'Hello, World!' },
-        taskId
-      });
-
-      expect(data).to.have.property('id');
-      expect(data.runId).to.equal(runId);
-      expect(data.key).to.equal('test-key');
-      expect(data.value).to.deep.equal({ message: 'Hello, World!' });
-      expect(data.taskId).to.equal(taskId);
-      expect(data.orgId).to.equal('test-org');
-      expect(data.tags).to.be.an('array').that.is.empty;
-    });
-
-    it('should write data with metadata and tags', async () => {
-      const data = await client.post(`/runs/${runId}/data`, {
-        key: 'config',
-        value: { setting: 'enabled' },
+  describe('POST /api/v1/runs/:runId/data', () => {
+    it('should create run data with key-value', async () => {
+      const response = await client.post(`/api/v1/runs/${runId}/data`, {
         taskId,
-        tags: ['production', 'v1.0'],
-        metadata: { version: '1.0', source: 'test' }
+        key: 'user-profile',
+        value: { name: 'John Doe', email: 'john@example.com' }
       });
 
-      expect(data.metadata).to.deep.equal({ version: '1.0', source: 'test' });
-      expect(data.tags).to.deep.equal(['production', 'v1.0']);
+      expect(response.status).to.equal(201);
+      expect(response.data).to.have.property('id');
+      expect(response.data).to.have.property('runId', runId);
+      expect(response.data).to.have.property('taskId', taskId);
+      expect(response.data).to.have.property('key', 'user-profile');
+      expect(response.data).to.have.property('value');
+      expect(response.data.value).to.deep.equal({ name: 'John Doe', email: 'john@example.com' });
+      expect(response.data).to.have.property('createdAt');
     });
 
-    it('should allow multiple entries with same key', async () => {
+    it('should create run data with tags', async () => {
+      const response = await client.post(`/api/v1/runs/${runId}/data`, {
+        taskId,
+        key: 'order-status',
+        value: { status: 'processing' },
+        tags: ['order', 'status', 'important']
+      });
+
+      expect(response.status).to.equal(201);
+      expect(response.data).to.have.property('tags');
+      expect(response.data.tags).to.deep.equal(['order', 'status', 'important']);
+    });
+
+    it('should create multiple values for the same key', async () => {
       // Create first entry
-      const data1 = await client.post(`/runs/${runId}/data`, {
-        key: 'temperature',
-        value: 20.5,
+      const response1 = await client.post(`/api/v1/runs/${runId}/data`, {
         taskId,
-        tags: ['morning', 'sensor-1']
+        key: 'log-entry',
+        value: { message: 'Started processing', timestamp: '2023-01-01T10:00:00Z' },
+        tags: ['log']
       });
 
       // Create second entry with same key
-      const data2 = await client.post(`/runs/${runId}/data`, {
-        key: 'temperature',
-        value: 22.3,
+      const response2 = await client.post(`/api/v1/runs/${runId}/data`, {
         taskId,
-        tags: ['afternoon', 'sensor-1']
+        key: 'log-entry',
+        value: { message: 'Processing complete', timestamp: '2023-01-01T10:05:00Z' },
+        tags: ['log']
       });
 
-      expect(data1.id).to.not.equal(data2.id);
-      expect(data1.key).to.equal(data2.key);
-      expect(data1.value).to.equal(20.5);
-      expect(data2.value).to.equal(22.3);
+      expect(response1.status).to.equal(201);
+      expect(response2.status).to.equal(201);
+      expect(response1.data.key).to.equal('log-entry');
+      expect(response2.data.key).to.equal('log-entry');
+      expect(response1.data.id).to.not.equal(response2.data.id);
     });
 
-  });
-
-  describe('GET /runs/:id/data with key parameter', () => {
-    it('should get latest value by key', async () => {
-      // Write multiple values
-      await client.post(`/runs/${runId}/data`, {
-        key: 'status',
-        value: 'starting',
-        taskId,
-        tags: ['v1']
-      });
-
-      await client.post(`/runs/${runId}/data`, {
-        key: 'status',
-        value: 'running',
-        taskId,
-        tags: ['v2']
-      });
-
-      // Query for latest value
-      const response = await client.get(`/runs/${runId}/data?key=status`);
-
-      expect(response.data).to.have.length(1);
-      expect(response.data[0].value).to.equal('running');
-      expect(response.data[0].tags).to.include('v2');
-    });
-
-    it('should get all values when includeAll=true', async () => {
-      // Write multiple values
-      await client.post(`/runs/${runId}/data`, {
-        key: 'log',
-        value: 'event1',
+    it('should return 400 for invalid input', async () => {
+      const response = await client.post(`/api/v1/runs/${runId}/data`, {
+        // Missing required fields
         taskId
       });
 
-      await client.post(`/runs/${runId}/data`, {
-        key: 'log',
-        value: 'event2',
-        taskId
-      });
-
-      // Query all values
-      const response = await client.get(`/runs/${runId}/data?key=log&includeAll=true`);
-
-      expect(response.data).to.have.length(2);
-      expect(response.data[0].value).to.equal('event1');
-      expect(response.data[1].value).to.equal('event2');
+      expect(response.status).to.equal(400);
+      expect(response.data).to.have.property('error');
     });
 
-    it('should return empty array for non-existent key', async () => {
-      const response = await client.get(`/runs/${runId}/data?key=non-existent`);
-      expect(response.data).to.be.an('array').that.is.empty;
+    it('should return 404 for non-existent run', async () => {
+      const response = await client.post('/api/v1/runs/non-existent-run/data', {
+        taskId,
+        key: 'test-key',
+        value: { test: 'data' }
+      });
+
+      expect(response.status).to.equal(404);
+      expect(response.data).to.have.property('error');
     });
   });
 
-  describe('GET /runs/:id/data', () => {
-    it('should list all run data', async () => {
-      // Write multiple data entries
-      await Promise.all([
-        client.post(`/runs/${runId}/data`, {
-          key: 'data-1',
-          value: { index: 1 },
-          taskId
-        }),
-        client.post(`/runs/${runId}/data`, {
-          key: 'data-2',
-          value: { index: 2 },
-          taskId
-        }),
-        client.post(`/runs/${runId}/data`, {
-          key: 'data-3',
-          value: { index: 3 },
-          taskId
-        })
-      ]);
-
-      // List all data
-      const response = await client.get(`/runs/${runId}/data`);
-
-      expect(response.data).to.have.length(3);
-      expect(response.data.map((d: any) => d.key)).to.include.members(['data-1', 'data-2', 'data-3']);
-    });
-
-    it('should support key pattern matching', async () => {
-      // Write data with patterns
-      await Promise.all([
-        client.post(`/runs/${runId}/data`, {
-          key: 'config.database',
-          value: { host: 'localhost' },
-          taskId
-        }),
-        client.post(`/runs/${runId}/data`, {
-          key: 'config.api',
-          value: { port: 3000 },
-          taskId
-        }),
-        client.post(`/runs/${runId}/data`, {
-          key: 'status.ready',
-          value: true,
-          taskId
-        })
-      ]);
-
-      // Query by pattern
-      const response = await client.get(`/runs/${runId}/data?keyPattern=config.*`);
-
-      expect(response.data).to.have.length(2);
-      expect(response.data.map((d: any) => d.key)).to.include.members(['config.database', 'config.api']);
-    });
-
-    it('should support key prefix matching', async () => {
-      // Write sensor data
-      await Promise.all([
-        client.post(`/runs/${runId}/data`, {
-          key: 'sensor.temp.indoor',
-          value: 22.5,
-          taskId,
-          tags: ['building-A']
-        }),
-        client.post(`/runs/${runId}/data`, {
-          key: 'sensor.temp.outdoor',
-          value: 18.3,
-          taskId,
-          tags: ['building-A']
-        }),
-        client.post(`/runs/${runId}/data`, {
-          key: 'sensor.humidity.indoor',
-          value: 45,
-          taskId,
-          tags: ['building-A']
-        })
-      ]);
-
-      // Query by key prefix
-      const response = await client.get(`/runs/${runId}/data?keyStartsWith=sensor.temp`);
-
-      expect(response.data).to.have.length(2);
-      expect(response.data.map((d: any) => d.key)).to.include.members(['sensor.temp.indoor', 'sensor.temp.outdoor']);
-    });
-
-    it('should support tag filtering', async () => {
-      // Write data with tags
-      await Promise.all([
-        client.post(`/runs/${runId}/data`, {
-          key: 'metric1',
-          value: 100,
-          taskId,
-          tags: ['production', 'europe']
-        }),
-        client.post(`/runs/${runId}/data`, {
-          key: 'metric2',
-          value: 200,
-          taskId,
-          tags: ['production', 'asia']
-        }),
-        client.post(`/runs/${runId}/data`, {
-          key: 'metric3',
-          value: 300,
-          taskId,
-          tags: ['development', 'europe']
-        })
-      ]);
-
-      // Query by tags (ANY mode - default)
-      const anyResponse = await client.get(`/runs/${runId}/data?tags=production,europe`);
-      expect(anyResponse.data).to.have.length(3); // All have at least one tag
-
-      // Query by tags (ALL mode)
-      const allResponse = await client.get(`/runs/${runId}/data?tags=production,europe&tagMode=all`);
-      expect(allResponse.data).to.have.length(1); // Only metric1 has both tags
-      expect(allResponse.data[0].key).to.equal('metric1');
-    });
-
-    it('should support tag prefix matching', async () => {
-      // Write data with timestamp tags
-      await Promise.all([
-        client.post(`/runs/${runId}/data`, {
-          key: 'event1',
-          value: 'data1',
-          taskId,
-          tags: ['2024-03-15', 'location-helsinki']
-        }),
-        client.post(`/runs/${runId}/data`, {
-          key: 'event2',
-          value: 'data2',
-          taskId,
-          tags: ['2024-03-16', 'location-stockholm']
-        }),
-        client.post(`/runs/${runId}/data`, {
-          key: 'event3',
-          value: 'data3',
-          taskId,
-          tags: ['2024-04-01', 'location-helsinki']
-        })
-      ]);
-
-      // Query by tag prefix
-      const response = await client.get(`/runs/${runId}/data?tagStartsWith=2024-03,location-helsinki`);
-      expect(response.data).to.have.length(2); // event1 and event3 match
-    });
-  });
-
-  describe('PATCH /runs/:id/data/:dataId/tags', () => {
-    it('should update tags on run data', async () => {
-      // Create data with initial tags
-      const data = await client.post(`/runs/${runId}/data`, {
-        key: 'tagged-data',
-        value: { test: true },
+  describe('GET /api/v1/runs/:runId/data', () => {
+    beforeEach(async () => {
+      // Create some test data
+      await client.post(`/api/v1/runs/${runId}/data`, {
         taskId,
-        tags: ['initial', 'draft']
+        key: 'user-data',
+        value: { name: 'John', age: 30 },
+        tags: ['user', 'profile']
       });
 
-      // Update tags
-      const updated = await client.patch(`/runs/${runId}/data/${data.id}/tags`, {
-        add: ['reviewed', 'production'],
-        remove: ['draft']
+      await client.post(`/api/v1/runs/${runId}/data`, {
+        taskId,
+        key: 'config',
+        value: { theme: 'dark', lang: 'en' },
+        tags: ['config', 'settings']
       });
 
-      expect(updated.tags).to.include.members(['initial', 'reviewed', 'production']);
-      expect(updated.tags).to.not.include('draft');
+      await client.post(`/api/v1/runs/${runId}/data`, {
+        taskId,
+        key: 'user-data',
+        value: { name: 'Jane', age: 25 },
+        tags: ['user', 'profile']
+      });
+    });
+
+    it('should get all run data', async () => {
+      const response = await client.get(`/api/v1/runs/${runId}/data`);
+
+      expect(response.status).to.equal(200);
+      expect(response.data).to.have.property('data');
+      expect(response.data).to.have.property('pagination');
+      expect(response.data.data).to.have.lengthOf(3);
+    });
+
+    it('should filter by key', async () => {
+      const response = await client.get(`/api/v1/runs/${runId}/data?key=user-data`);
+
+      expect(response.status).to.equal(200);
+      expect(response.data.data).to.have.lengthOf(2);
+      response.data.data.forEach((item: any) => {
+        expect(item.key).to.equal('user-data');
+      });
+    });
+
+    it('should filter by tags', async () => {
+      const response = await client.get(`/api/v1/runs/${runId}/data?tags=config`);
+
+      expect(response.status).to.equal(200);
+      expect(response.data.data).to.have.lengthOf(1);
+      expect(response.data.data[0].tags).to.include('config');
+    });
+
+    it('should filter by key prefix', async () => {
+      const response = await client.get(`/api/v1/runs/${runId}/data?keyPrefix=user`);
+
+      expect(response.status).to.equal(200);
+      expect(response.data.data).to.have.lengthOf(2);
+      response.data.data.forEach((item: any) => {
+        expect(item.key).to.match(/^user/);
+      });
+    });
+
+    it('should support pagination', async () => {
+      const response = await client.get(`/api/v1/runs/${runId}/data?limit=2&offset=1`);
+
+      expect(response.status).to.equal(200);
+      expect(response.data.data).to.have.lengthOf(2);
+      expect(response.data.pagination).to.have.property('total', 3);
+      expect(response.data.pagination).to.have.property('limit', 2);
+      expect(response.data.pagination).to.have.property('offset', 1);
+    });
+
+    it('should sort by created date', async () => {
+      const response = await client.get(`/api/v1/runs/${runId}/data?sortBy=createdAt&sortOrder=desc`);
+
+      expect(response.status).to.equal(200);
+      const dates = response.data.data.map((item: any) => new Date(item.createdAt).getTime());
+      
+      // Check if sorted in descending order
+      for (let i = 1; i < dates.length; i++) {
+        expect(dates[i-1]).to.be.greaterThanOrEqual(dates[i]);
+      }
     });
   });
 
-  describe('DELETE /runs/:id/data', () => {
-    it('should delete by key', async () => {
-      // Write multiple entries
-      await client.post(`/runs/${runId}/data`, {
-        key: 'delete-test',
-        value: { v: 1 },
-        taskId
-      });
-      await client.post(`/runs/${runId}/data`, {
-        key: 'delete-test',
-        value: { v: 2 },
-        taskId
-      });
+  describe('PATCH /api/v1/runs/:runId/data/:dataId/tags', () => {
+    let dataId: string;
 
-      // Delete all entries for key
-      const result = await client.delete(`/runs/${runId}/data?key=delete-test`);
-      expect(result.deleted).to.equal(2);
-
-      // Verify they're gone
-      const response = await client.get(`/runs/${runId}/data?key=delete-test`);
-      expect(response.data).to.be.empty;
+    beforeEach(async () => {
+      const response = await client.post(`/api/v1/runs/${runId}/data`, {
+        taskId,
+        key: 'test-data',
+        value: { test: 'value' },
+        tags: ['original', 'tag']
+      });
+      dataId = response.data.id;
     });
 
-    it('should delete by id', async () => {
-      // Write data
-      const data = await client.post(`/runs/${runId}/data`, {
-        key: 'specific-delete',
-        value: { temporary: true },
-        taskId
+    it('should update tags', async () => {
+      const response = await client.patch(`/api/v1/runs/${runId}/data/${dataId}/tags`, {
+        tags: ['updated', 'tags', 'new']
       });
 
-      // Delete by ID
-      const result = await client.delete(`/runs/${runId}/data?id=${data.id}`);
-      expect(result.deleted).to.equal(1);
+      expect(response.status).to.equal(200);
+      expect(response.data).to.have.property('tags');
+      expect(response.data.tags).to.deep.equal(['updated', 'tags', 'new']);
+    });
+
+    it('should return 404 for non-existent data', async () => {
+      const response = await client.patch(`/api/v1/runs/${runId}/data/non-existent-id/tags`, {
+        tags: ['test']
+      });
+
+      expect(response.status).to.equal(404);
+      expect(response.data).to.have.property('error');
+    });
+  });
+
+  describe('DELETE /api/v1/runs/:runId/data', () => {
+    beforeEach(async () => {
+      // Create some test data
+      await client.post(`/api/v1/runs/${runId}/data`, {
+        taskId,
+        key: 'temp-data',
+        value: { temp: 'value1' }
+      });
+
+      await client.post(`/api/v1/runs/${runId}/data`, {
+        taskId,
+        key: 'temp-data',
+        value: { temp: 'value2' }
+      });
+
+      await client.post(`/api/v1/runs/${runId}/data`, {
+        taskId,
+        key: 'keep-data',
+        value: { keep: 'value' }
+      });
+    });
+
+    it('should delete data by key', async () => {
+      const response = await client.delete(`/api/v1/runs/${runId}/data?key=temp-data`);
+
+      expect(response.status).to.equal(200);
+      expect(response.data).to.have.property('deleted');
+      expect(response.data.deleted).to.equal(2);
+
+      // Verify deletion
+      const listResponse = await client.get(`/api/v1/runs/${runId}/data`);
+      expect(listResponse.data.data).to.have.lengthOf(1);
+      expect(listResponse.data.data[0].key).to.equal('keep-data');
+    });
+
+    it('should delete data by id', async () => {
+      // Get a specific data entry
+      const listResponse = await client.get(`/api/v1/runs/${runId}/data?key=temp-data&limit=1`);
+      const dataId = listResponse.data.data[0].id;
+
+      const response = await client.delete(`/api/v1/runs/${runId}/data?id=${dataId}`);
+
+      expect(response.status).to.equal(200);
+      expect(response.data).to.have.property('deleted', 1);
+
+      // Verify only one was deleted
+      const newListResponse = await client.get(`/api/v1/runs/${runId}/data`);
+      expect(newListResponse.data.data).to.have.lengthOf(2);
+    });
+
+    it('should return 400 if neither key nor id provided', async () => {
+      const response = await client.delete(`/api/v1/runs/${runId}/data`);
+
+      expect(response.status).to.equal(400);
+      expect(response.data).to.have.property('error');
     });
   });
 });

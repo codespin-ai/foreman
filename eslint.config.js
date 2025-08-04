@@ -43,7 +43,7 @@ export default [
     },
   },
   {
-    files: ['**/foreman-integration-tests/**/*.ts'],
+    files: ['**/foreman-integration-tests/**/*.ts', '**/foreman-client/src/tests/**/*.ts', '**/foreman-test-utils/**/*.ts'],
     languageOptions: {
       parser: typescriptParser,
       parserOptions: {

@@ -1,175 +1,231 @@
 import { expect } from 'chai';
-import { client } from '../index.js';
+import { testDb, client } from '../test-setup.js';
 
 describe('Tasks API', () => {
   let runId: string;
 
   beforeEach(async () => {
-    // Create a run for testing tasks
-    const run = await client.post('/runs', {
-      inputData: { test: true }
+    await testDb.truncateAllTables();
+    
+    // Create a run for task tests
+    const runResponse = await client.post('/api/v1/runs', {
+      inputData: { type: 'test-workflow' }
     });
-    runId = run.id;
+    runId = runResponse.data.id;
   });
 
-  describe('POST /tasks', () => {
+  describe('POST /api/v1/tasks', () => {
     it('should create a new task', async () => {
-      const taskData = {
+      const response = await client.post('/api/v1/tasks', {
         runId,
+        type: 'process-data',
+        inputData: { step: 1 }
+      });
+
+      expect(response.status).to.equal(201);
+      expect(response.data).to.have.property('id');
+      expect(response.data).to.have.property('runId', runId);
+      expect(response.data).to.have.property('type', 'process-data');
+      expect(response.data).to.have.property('status', 'pending');
+      expect(response.data).to.have.property('inputData');
+      expect(response.data.inputData).to.deep.equal({ step: 1 });
+      expect(response.data).to.have.property('createdAt');
+      expect(response.data).to.have.property('updatedAt');
+    });
+
+    it('should create a task with parent relationship', async () => {
+      // Create parent task
+      const parentResponse = await client.post('/api/v1/tasks', {
+        runId,
+        type: 'parent-task',
+        inputData: { step: 1 }
+      });
+
+      // Create child task
+      const response = await client.post('/api/v1/tasks', {
+        runId,
+        type: 'child-task',
+        parentTaskId: parentResponse.data.id,
+        inputData: { step: 2 }
+      });
+
+      expect(response.status).to.equal(201);
+      expect(response.data).to.have.property('parentTaskId', parentResponse.data.id);
+    });
+
+    it('should return 400 for invalid input', async () => {
+      const response = await client.post('/api/v1/tasks', {
+        // Missing required fields
+        type: 'invalid-task'
+      });
+
+      expect(response.status).to.equal(400);
+      expect(response.data).to.have.property('error');
+    });
+
+    it('should return 404 for non-existent run', async () => {
+      const response = await client.post('/api/v1/tasks', {
+        runId: 'non-existent-run',
         type: 'test-task',
-        data: { action: 'process' },
-        dependencies: []
-      };
-
-      const task = await client.post('/tasks', taskData);
-
-      expect(task).to.have.property('id');
-      expect(task.runId).to.equal(runId);
-      expect(task.type).to.equal('test-task');
-      expect(task.status).to.equal('pending');
-      expect(task.data).to.deep.equal({ action: 'process' });
-      expect(task.attemptCount).to.equal(0);
-    });
-
-    it('should create task with dependencies', async () => {
-      // Create first task
-      const task1 = await client.post('/tasks', {
-        runId,
-        type: 'task-1',
-        data: { step: 1 }
+        inputData: {}
       });
 
-      // Create second task depending on first
-      const task2 = await client.post('/tasks', {
-        runId,
-        type: 'task-2',
-        data: { step: 2 },
-        dependencies: [task1.id]
-      });
-
-      expect(task2.dependencies).to.deep.equal([task1.id]);
-    });
-
-    it('should reject task for non-existent run', async () => {
-      try {
-        await client.post('/tasks', {
-          runId: 'non-existent',
-          type: 'test',
-          data: {}
-        });
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.message).to.include('Run not found');
-      }
+      expect(response.status).to.equal(404);
+      expect(response.data).to.have.property('error');
     });
   });
 
-  describe('GET /tasks/:id', () => {
-    it('should retrieve a task by ID', async () => {
-      // Create a task
-      const created = await client.post('/tasks', {
+  describe('GET /api/v1/tasks/:id', () => {
+    it('should get a task by id', async () => {
+      // Create a task first
+      const createResponse = await client.post('/api/v1/tasks', {
         runId,
         type: 'test-task',
-        data: { foo: 'bar' }
+        inputData: { test: 'data' }
       });
+      const taskId = createResponse.data.id;
 
-      // Retrieve it
-      const retrieved = await client.get(`/tasks/${created.id}`);
+      // Get the task
+      const response = await client.get(`/api/v1/tasks/${taskId}`);
 
-      expect(retrieved.id).to.equal(created.id);
-      expect(retrieved.data).to.deep.equal({ foo: 'bar' });
+      expect(response.status).to.equal(200);
+      expect(response.data).to.have.property('id', taskId);
+      expect(response.data).to.have.property('runId', runId);
+      expect(response.data).to.have.property('type', 'test-task');
+    });
+
+    it('should return 404 for non-existent task', async () => {
+      const response = await client.get('/api/v1/tasks/non-existent-id');
+
+      expect(response.status).to.equal(404);
+      expect(response.data).to.have.property('error');
     });
   });
 
-  describe('PUT /tasks/:id/status', () => {
-    it('should update task status to running', async () => {
-      // Create a task
-      const task = await client.post('/tasks', {
+  describe('PATCH /api/v1/tasks/:id', () => {
+    it('should update task status', async () => {
+      // Create a task first
+      const createResponse = await client.post('/api/v1/tasks', {
         runId,
         type: 'test-task',
-        data: {}
+        inputData: { test: 'data' }
       });
+      const taskId = createResponse.data.id;
 
-      // Update status
-      const updated = await client.put(`/tasks/${task.id}/status`, {
+      // Update the task
+      const response = await client.patch(`/api/v1/tasks/${taskId}`, {
         status: 'running'
       });
 
-      expect(updated.status).to.equal('running');
-      expect(updated.startedAt).to.be.a('string');
-      expect(updated.attemptCount).to.equal(1);
+      expect(response.status).to.equal(200);
+      expect(response.data).to.have.property('id', taskId);
+      expect(response.data).to.have.property('status', 'running');
     });
 
-    it('should complete a task with result', async () => {
-      // Create a task
-      const task = await client.post('/tasks', {
+    it('should update task with output data and completion', async () => {
+      // Create a task first
+      const createResponse = await client.post('/api/v1/tasks', {
         runId,
         type: 'test-task',
-        data: {}
+        inputData: { test: 'data' }
       });
+      const taskId = createResponse.data.id;
 
-      // Complete it
-      const completed = await client.put(`/tasks/${task.id}/status`, {
+      // Update with completion
+      const response = await client.patch(`/api/v1/tasks/${taskId}`, {
         status: 'completed',
-        result: { success: true, output: 'Done' }
+        outputData: { result: 'success' },
+        completedAt: new Date().toISOString()
       });
 
-      expect(completed.status).to.equal('completed');
-      expect(completed.result).to.deep.equal({ success: true, output: 'Done' });
-      expect(completed.completedAt).to.be.a('string');
+      expect(response.status).to.equal(200);
+      expect(response.data).to.have.property('status', 'completed');
+      expect(response.data).to.have.property('outputData');
+      expect(response.data.outputData).to.deep.equal({ result: 'success' });
+      expect(response.data).to.have.property('completedAt');
     });
 
-    it('should fail a task with error', async () => {
-      // Create a task
-      const task = await client.post('/tasks', {
+    it('should update task with error information', async () => {
+      // Create a task first
+      const createResponse = await client.post('/api/v1/tasks', {
         runId,
         type: 'test-task',
-        data: {}
+        inputData: { test: 'data' }
       });
+      const taskId = createResponse.data.id;
 
-      // Fail it
-      const failed = await client.put(`/tasks/${task.id}/status`, {
+      // Update with error
+      const response = await client.patch(`/api/v1/tasks/${taskId}`, {
         status: 'failed',
-        error: { message: 'Task failed', code: 'TEST_ERROR' }
+        error: 'Task processing failed',
+        completedAt: new Date().toISOString()
       });
 
-      expect(failed.status).to.equal('failed');
-      expect(failed.error).to.deep.equal({ message: 'Task failed', code: 'TEST_ERROR' });
+      expect(response.status).to.equal(200);
+      expect(response.data).to.have.property('status', 'failed');
+      expect(response.data).to.have.property('error', 'Task processing failed');
+    });
+
+    it('should return 404 for non-existent task', async () => {
+      const response = await client.patch('/api/v1/tasks/non-existent-id', {
+        status: 'completed'
+      });
+
+      expect(response.status).to.equal(404);
+      expect(response.data).to.have.property('error');
     });
   });
 
-  describe('GET /runs/:id/tasks', () => {
-    it('should list tasks for a run', async () => {
-      // Create multiple tasks
-      await Promise.all([
-        client.post('/tasks', { runId, type: 'task-1', data: {} }),
-        client.post('/tasks', { runId, type: 'task-2', data: {} }),
-        client.post('/tasks', { runId, type: 'task-3', data: {} })
-      ]);
+  describe('GET /api/v1/tasks', () => {
+    it('should list tasks with pagination', async () => {
+      // Create several tasks
+      await client.post('/api/v1/tasks', { runId, type: 'task-1', inputData: {} });
+      await client.post('/api/v1/tasks', { runId, type: 'task-2', inputData: {} });
+      await client.post('/api/v1/tasks', { runId, type: 'task-3', inputData: {} });
 
       // List tasks
-      const response = await client.get(`/runs/${runId}/tasks`);
+      const response = await client.get('/api/v1/tasks?limit=2');
 
-      expect(response.tasks).to.have.length(3);
-      expect(response.tasks.map((t: any) => t.type)).to.include.members(['task-1', 'task-2', 'task-3']);
+      expect(response.status).to.equal(200);
+      expect(response.data).to.have.property('data');
+      expect(response.data).to.have.property('pagination');
+      expect(response.data.data).to.have.lengthOf(2);
+      expect(response.data.pagination).to.have.property('total', 3);
+    });
+
+    it('should filter tasks by run id', async () => {
+      // Create another run
+      const run2Response = await client.post('/api/v1/runs', {
+        inputData: { type: 'other-workflow' }
+      });
+      const run2Id = run2Response.data.id;
+
+      // Create tasks in both runs
+      await client.post('/api/v1/tasks', { runId, type: 'task-1', inputData: {} });
+      await client.post('/api/v1/tasks', { runId: run2Id, type: 'task-2', inputData: {} });
+
+      // Filter by run
+      const response = await client.get(`/api/v1/tasks?runId=${runId}`);
+
+      expect(response.status).to.equal(200);
+      expect(response.data.data).to.have.lengthOf(1);
+      expect(response.data.data[0]).to.have.property('runId', runId);
     });
 
     it('should filter tasks by status', async () => {
       // Create tasks
-      const task1 = await client.post('/tasks', { runId, type: 'task-1', data: {} });
-      await client.post('/tasks', { runId, type: 'task-2', data: {} });
-      
-      // Update one to completed
-      await client.put(`/tasks/${task1.id}/status`, {
-        status: 'completed',
-        result: { done: true }
-      });
+      const task1Response = await client.post('/api/v1/tasks', { runId, type: 'task-1', inputData: {} });
+      await client.post('/api/v1/tasks', { runId, type: 'task-2', inputData: {} });
+
+      // Update one to running
+      await client.patch(`/api/v1/tasks/${task1Response.data.id}`, { status: 'running' });
 
       // Filter by status
-      const response = await client.get(`/runs/${runId}/tasks?status=completed`);
+      const response = await client.get('/api/v1/tasks?status=running');
 
-      expect(response.tasks).to.have.length(1);
-      expect(response.tasks[0].id).to.equal(task1.id);
+      expect(response.status).to.equal(200);
+      expect(response.data.data).to.have.lengthOf(1);
+      expect(response.data.data[0]).to.have.property('status', 'running');
     });
   });
 });

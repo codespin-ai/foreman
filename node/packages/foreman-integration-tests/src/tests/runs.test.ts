@@ -1,141 +1,153 @@
 import { expect } from 'chai';
-import { client } from '../index.js';
+import { testDb, client } from '../test-setup.js';
 
 describe('Runs API', () => {
-  describe('POST /runs', () => {
-    it('should create a new run', async () => {
-      const runData = {
-        inputData: { message: 'Hello, World!' },
-        metadata: { source: 'test-suite' }
-      };
+  beforeEach(async () => {
+    await testDb.truncateAllTables();
+  });
 
-      const run = await client.post('/runs', runData);
+  describe('POST /api/v1/runs', () => {
+    it('should create a new run with minimal data', async () => {
+      const response = await client.post('/api/v1/runs', {
+        inputData: { type: 'test-workflow' }
+      });
 
-      expect(run).to.have.property('id');
-      expect(run.status).to.equal('pending');
-      expect(run.orgId).to.equal('test-org');
-      expect(run.inputData).to.deep.equal(runData.inputData);
-      expect(run.metadata).to.deep.equal(runData.metadata);
-      expect(run.totalTasks).to.equal(0);
-      expect(run.completedTasks).to.equal(0);
-      expect(run.failedTasks).to.equal(0);
+      expect(response.status).to.equal(201);
+      expect(response.data).to.have.property('id');
+      expect(response.data).to.have.property('orgId', 'test-org');
+      expect(response.data).to.have.property('status', 'pending');
+      expect(response.data).to.have.property('inputData');
+      expect(response.data.inputData).to.deep.equal({ type: 'test-workflow' });
+      expect(response.data).to.have.property('createdAt');
+      expect(response.data).to.have.property('updatedAt');
     });
 
-    it('should validate input data', async () => {
-      try {
-        await client.post('/runs', { invalidField: 'test' });
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.message).to.include('Invalid request');
-      }
+    it('should create a run with metadata', async () => {
+      const response = await client.post('/api/v1/runs', {
+        inputData: { orderId: '12345' },
+        metadata: { source: 'api', priority: 'high' }
+      });
+
+      expect(response.status).to.equal(201);
+      expect(response.data).to.have.property('metadata');
+      expect(response.data.metadata).to.deep.equal({ source: 'api', priority: 'high' });
+    });
+
+    it('should return 400 for invalid input', async () => {
+      const response = await client.post('/api/v1/runs', {
+        // Missing required inputData
+      });
+
+      expect(response.status).to.equal(400);
+      expect(response.data).to.have.property('error');
     });
   });
 
-  describe('GET /runs/:id', () => {
-    it('should retrieve a run by ID', async () => {
+  describe('GET /api/v1/runs/:id', () => {
+    it('should get a run by id', async () => {
       // Create a run first
-      const created = await client.post('/runs', {
-        inputData: { test: true }
+      const createResponse = await client.post('/api/v1/runs', {
+        inputData: { test: 'data' }
       });
+      const runId = createResponse.data.id;
 
-      // Retrieve it
-      const retrieved = await client.get(`/runs/${created.id}`);
+      // Get the run
+      const response = await client.get(`/api/v1/runs/${runId}`);
 
-      expect(retrieved.id).to.equal(created.id);
-      expect(retrieved.inputData).to.deep.equal({ test: true });
+      expect(response.status).to.equal(200);
+      expect(response.data).to.have.property('id', runId);
+      expect(response.data).to.have.property('inputData');
+      expect(response.data.inputData).to.deep.equal({ test: 'data' });
     });
 
     it('should return 404 for non-existent run', async () => {
-      try {
-        await client.get('/runs/non-existent-id');
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.message).to.include('404');
-      }
+      const response = await client.get('/api/v1/runs/non-existent-id');
+
+      expect(response.status).to.equal(404);
+      expect(response.data).to.have.property('error');
     });
   });
 
-  describe('PUT /runs/:id/status', () => {
+  describe('PATCH /api/v1/runs/:id', () => {
     it('should update run status', async () => {
-      // Create a run
-      const run = await client.post('/runs', {
-        inputData: { test: true }
+      // Create a run first
+      const createResponse = await client.post('/api/v1/runs', {
+        inputData: { test: 'data' }
       });
+      const runId = createResponse.data.id;
 
-      // Update status
-      const updated = await client.put(`/runs/${run.id}/status`, {
+      // Update the run
+      const response = await client.patch(`/api/v1/runs/${runId}`, {
         status: 'running'
       });
 
-      expect(updated.status).to.equal('running');
-      expect(updated.startedAt).to.be.a('string');
+      expect(response.status).to.equal(200);
+      expect(response.data).to.have.property('id', runId);
+      expect(response.data).to.have.property('status', 'running');
     });
 
-    it('should complete a run with output', async () => {
-      // Create a run
-      const run = await client.post('/runs', {
-        inputData: { test: true }
+    it('should update run output data', async () => {
+      // Create a run first
+      const createResponse = await client.post('/api/v1/runs', {
+        inputData: { test: 'data' }
       });
+      const runId = createResponse.data.id;
 
-      // Complete it
-      const completed = await client.put(`/runs/${run.id}/status`, {
+      // Update with output data
+      const response = await client.patch(`/api/v1/runs/${runId}`, {
         status: 'completed',
         outputData: { result: 'success' }
       });
 
-      expect(completed.status).to.equal('completed');
-      expect(completed.outputData).to.deep.equal({ result: 'success' });
-      expect(completed.completedAt).to.be.a('string');
-      expect(completed.durationMs).to.be.a('number');
+      expect(response.status).to.equal(200);
+      expect(response.data).to.have.property('status', 'completed');
+      expect(response.data).to.have.property('outputData');
+      expect(response.data.outputData).to.deep.equal({ result: 'success' });
     });
 
-    it('should fail a run with error', async () => {
-      // Create a run
-      const run = await client.post('/runs', {
-        inputData: { test: true }
+    it('should return 404 for non-existent run', async () => {
+      const response = await client.patch('/api/v1/runs/non-existent-id', {
+        status: 'completed'
       });
 
-      // Fail it
-      const failed = await client.put(`/runs/${run.id}/status`, {
-        status: 'failed',
-        errorData: { message: 'Test error' }
-      });
-
-      expect(failed.status).to.equal('failed');
-      expect(failed.errorData).to.deep.equal({ message: 'Test error' });
+      expect(response.status).to.equal(404);
+      expect(response.data).to.have.property('error');
     });
   });
 
-  describe('GET /runs', () => {
+  describe('GET /api/v1/runs', () => {
     it('should list runs with pagination', async () => {
-      // Create multiple runs
-      await Promise.all([
-        client.post('/runs', { inputData: { index: 1 } }),
-        client.post('/runs', { inputData: { index: 2 } }),
-        client.post('/runs', { inputData: { index: 3 } })
-      ]);
+      // Create a few runs
+      await client.post('/api/v1/runs', { inputData: { test: 1 } });
+      await client.post('/api/v1/runs', { inputData: { test: 2 } });
+      await client.post('/api/v1/runs', { inputData: { test: 3 } });
 
-      // List with pagination
-      const response = await client.get('/runs?limit=2');
+      // List runs
+      const response = await client.get('/api/v1/runs?limit=2');
 
-      expect(response.runs).to.have.length(2);
-      expect(response.total).to.equal(3);
-      expect(response.hasMore).to.be.true;
+      expect(response.status).to.equal(200);
+      expect(response.data).to.have.property('data');
+      expect(response.data).to.have.property('pagination');
+      expect(response.data.data).to.have.lengthOf(2);
+      expect(response.data.pagination).to.have.property('total', 3);
+      expect(response.data.pagination).to.have.property('limit', 2);
+      expect(response.data.pagination).to.have.property('offset', 0);
     });
 
     it('should filter runs by status', async () => {
       // Create runs with different statuses
-      const run1 = await client.post('/runs', { inputData: { test: 1 } });
-      await client.post('/runs', { inputData: { test: 2 } });
+      const run1Response = await client.post('/api/v1/runs', { inputData: { test: 1 } });
+      await client.post('/api/v1/runs', { inputData: { test: 2 } });
       
       // Update one to running
-      await client.put(`/runs/${run1.id}/status`, { status: 'running' });
+      await client.patch(`/api/v1/runs/${run1Response.data.id}`, { status: 'running' });
 
       // Filter by status
-      const response = await client.get('/runs?status=running');
+      const response = await client.get('/api/v1/runs?status=running');
 
-      expect(response.runs).to.have.length(1);
-      expect(response.runs[0].id).to.equal(run1.id);
+      expect(response.status).to.equal(200);
+      expect(response.data.data).to.have.lengthOf(1);
+      expect(response.data.data[0]).to.have.property('status', 'running');
     });
   });
 });

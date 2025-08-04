@@ -16,6 +16,7 @@ PACKAGES=(
   "foreman-core"
   "foreman-logger"
   "foreman-db"
+  "foreman-test-utils"
   "foreman-server"
   "foreman-client"
   "foreman-integration-tests"

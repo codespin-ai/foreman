@@ -58,7 +58,11 @@ app.use((req, res, next) => {
 
 // Health check (no auth required)
 app.get('/health', (_req, res) => {
-  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
 // API routes
@@ -73,7 +77,14 @@ app.use((_req, res) => {
 });
 
 // Error handler
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  // Handle JSON parsing errors
+  if (err instanceof SyntaxError && 'body' in err) {
+    logger.warn('Invalid JSON in request', { error: err.message });
+    res.status(400).json({ error: 'Invalid JSON in request body' });
+    return;
+  }
+  
   logger.error('Unhandled error', { error: err });
   res.status(500).json({ error: 'Internal server error' });
 });

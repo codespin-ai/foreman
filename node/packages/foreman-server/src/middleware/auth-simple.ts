@@ -25,24 +25,52 @@ export async function authenticate(
   next: NextFunction
 ): Promise<void> {
   try {
-    // In test mode, use test values
-    if (process.env.NODE_ENV === 'test' || req.headers['x-api-key'] === 'test-api-key') {
+    // Check if authentication is disabled (similar to Permiso pattern)
+    const authEnabled = process.env.FOREMAN_API_KEY_ENABLED === 'true' || !!process.env.FOREMAN_API_KEY;
+    
+    if (!authEnabled) {
+      // Authentication is disabled, allow all requests
       req.auth = {
-        orgId: 'test-org',
-        apiKeyId: 'test-key-id'
+        orgId: 'default-org',
+        apiKeyId: 'no-auth'
       };
       next();
       return;
     }
     
-    const authHeader = req.headers.authorization;
+    // Check for API key in x-api-key header or Authorization header
+    let apiKey = req.headers['x-api-key'] as string;
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ error: 'Missing or invalid authorization header' });
+    if (!apiKey) {
+      const authHeader = req.headers.authorization;
+      
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        res.status(401).json({ error: 'Missing or invalid authorization header' });
+        return;
+      }
+      
+      apiKey = authHeader.substring(7); // Remove 'Bearer ' prefix
+    }
+    
+    if (!apiKey) {
+      res.status(401).json({ error: 'API key required but not provided' });
       return;
     }
     
-    const apiKey = authHeader.substring(7); // Remove 'Bearer ' prefix
+    // If FOREMAN_API_KEY is set, validate against it (for test environments)
+    if (process.env.FOREMAN_API_KEY) {
+      // In test mode, accept either the exact test key or properly formatted keys
+      if (apiKey === process.env.FOREMAN_API_KEY) {
+        // For test API key, use default org
+        req.auth = {
+          orgId: 'test-org',
+          apiKeyId: 'test-key-id'
+        };
+        next();
+        return;
+      }
+      // Continue to format validation below
+    }
     
     // Simple validation - just check if API key matches expected format
     // Format: fmn_[env]_[orgId]_[random] (e.g., fmn_prod_org123_abc456)

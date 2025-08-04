@@ -1,24 +1,24 @@
 import { Result, success, failure } from '@codespin/foreman-core';
 import { createLogger } from '@codespin/foreman-logger';
 import type { Database } from '@codespin/foreman-db';
-import type { Run, RunDbRow, PaginationParams, PaginatedResult } from '../../types.js';
-import { mapRunFromDb } from '../../mappers.js';
+import type { Task, TaskDbRow, PaginationParams, PaginatedResult } from '../../types.js';
+import { mapTaskFromDb } from '../../mappers.js';
 
-const logger = createLogger('foreman:domain:run');
+const logger = createLogger('foreman:domain:task');
 
 /**
- * List runs with pagination and filtering
+ * List tasks with pagination and filtering
  * 
  * @param db - Database connection
  * @param orgId - Organization ID for access control
  * @param params - Pagination and filter parameters
- * @returns Result containing paginated runs or an error
+ * @returns Result containing paginated tasks or an error
  */
-export async function listRuns(
+export async function listTasks(
   db: Database,
   orgId: string,
-  params: PaginationParams & { status?: string }
-): Promise<Result<PaginatedResult<Run>, Error>> {
+  params: PaginationParams & { runId?: string; status?: string }
+): Promise<Result<PaginatedResult<Task>, Error>> {
   try {
     const limit = params.limit || 20;
     const offset = params.offset || 0;
@@ -29,6 +29,11 @@ export async function listRuns(
     const conditions = ['org_id = $(orgId)'];
     const queryParams: Record<string, unknown> = { orgId, limit, offset };
     
+    if (params.runId) {
+      conditions.push('run_id = $(runId)');
+      queryParams.runId = params.runId;
+    }
+    
     if (params.status) {
       conditions.push('status = $(status)');
       queryParams.status = params.status;
@@ -36,30 +41,30 @@ export async function listRuns(
     
     // Get total count
     const countResult = await db.one<{ count: string }>(
-      `SELECT COUNT(*) as count FROM run WHERE ${conditions.join(' AND ')}`,
+      `SELECT COUNT(*) as count FROM task WHERE ${conditions.join(' AND ')}`,
       queryParams
     );
     const total = parseInt(countResult.count);
     
     // Get paginated results
-    const rows = await db.manyOrNone<RunDbRow>(
-      `SELECT * FROM run 
+    const rows = await db.manyOrNone<TaskDbRow>(
+      `SELECT * FROM task 
        WHERE ${conditions.join(' AND ')}
        ORDER BY ${sortBy} ${sortOrder}
        LIMIT $(limit) OFFSET $(offset)`,
       queryParams
     );
     
-    const runs = rows.map(mapRunFromDb);
+    const tasks = rows.map(mapTaskFromDb);
     
     return success({
-      data: runs,
+      data: tasks,
       total,
       limit,
       offset
     });
   } catch (error) {
-    logger.error('Failed to list runs', { error, orgId, params });
+    logger.error('Failed to list tasks', { error, orgId, params });
     return failure(error as Error);
   }
 }

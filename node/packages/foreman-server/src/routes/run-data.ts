@@ -66,6 +66,11 @@ router.post('/', async (req: Request<{ runId: string }>, res) => {
     });
     
     if (!result.success) {
+      // Return 404 if run or task not found
+      if (result.error.message.includes('not found')) {
+        res.status(404).json({ error: result.error.message });
+        return;
+      }
       res.status(400).json({ error: result.error.message });
       return;
     }

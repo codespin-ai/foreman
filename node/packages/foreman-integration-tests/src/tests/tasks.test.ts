@@ -65,7 +65,7 @@ describe('Tasks API', () => {
 
     it('should return 404 for non-existent run', async () => {
       const response = await client.post('/api/v1/tasks', {
-        runId: 'non-existent-run',
+        runId: '00000000-0000-0000-0000-000000000000',
         type: 'test-task',
         inputData: {}
       });
@@ -157,13 +157,14 @@ describe('Tasks API', () => {
       // Update with error
       const response = await client.patch(`/api/v1/tasks/${taskId}`, {
         status: 'failed',
-        error: 'Task processing failed',
+        errorData: { message: 'Task processing failed' },
         completedAt: new Date().toISOString()
       });
 
       expect(response.status).to.equal(200);
       expect(response.data).to.have.property('status', 'failed');
-      expect(response.data).to.have.property('error', 'Task processing failed');
+      expect(response.data).to.have.property('errorData');
+      expect(response.data.errorData).to.deep.equal({ message: 'Task processing failed' });
     });
 
     it('should return 404 for non-existent task', async () => {

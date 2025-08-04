@@ -21,6 +21,7 @@ export type Run = {
   completedTasks: number;
   failedTasks: number;
   createdAt: Date;
+  updatedAt: Date;
   startedAt?: Date;
   completedAt?: Date;
   durationMs?: number;
@@ -41,6 +42,7 @@ export type Task = {
   retryCount: number;
   maxRetries: number;
   createdAt: Date;
+  updatedAt: Date;
   queuedAt?: Date;
   startedAt?: Date;
   completedAt?: Date;
@@ -78,6 +80,7 @@ export type RunDbRow = {
   completed_tasks: number;
   failed_tasks: number;
   created_at: Date;
+  updated_at: Date;
   started_at: Date | null;
   completed_at: Date | null;
   duration_ms: string | null; // bigint comes as string
@@ -97,6 +100,7 @@ export type TaskDbRow = {
   retry_count: number;
   max_retries: number;
   created_at: Date;
+  updated_at: Date;
   queued_at: Date | null;
   started_at: Date | null;
   completed_at: Date | null;
@@ -167,7 +171,7 @@ export type PaginationParams = {
 };
 
 export type PaginatedResult<T> = {
-  items: T[];
+  data: T[];
   total: number;
   limit: number;
   offset: number;

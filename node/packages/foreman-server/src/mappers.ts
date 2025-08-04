@@ -25,6 +25,7 @@ export function mapRunFromDb(row: RunDbRow): Run {
     completedTasks: row.completed_tasks,
     failedTasks: row.failed_tasks,
     createdAt: row.created_at,
+    updatedAt: row.updated_at,
     startedAt: row.started_at ?? undefined,
     completedAt: row.completed_at ?? undefined,
     durationMs: row.duration_ms ? parseInt(row.duration_ms) : undefined
@@ -48,6 +49,7 @@ export function mapRunToDb(run: Partial<Run>): Partial<RunDbRow> {
   if (run.completedTasks !== undefined) dbRow.completed_tasks = run.completedTasks;
   if (run.failedTasks !== undefined) dbRow.failed_tasks = run.failedTasks;
   if (run.createdAt !== undefined) dbRow.created_at = run.createdAt;
+  if (run.updatedAt !== undefined) dbRow.updated_at = run.updatedAt;
   if (run.startedAt !== undefined) dbRow.started_at = run.startedAt;
   if (run.completedAt !== undefined) dbRow.completed_at = run.completedAt;
   if (run.durationMs !== undefined) dbRow.duration_ms = run.durationMs.toString();
@@ -73,6 +75,7 @@ export function mapTaskFromDb(row: TaskDbRow): Task {
     retryCount: row.retry_count,
     maxRetries: row.max_retries,
     createdAt: row.created_at,
+    updatedAt: row.updated_at,
     queuedAt: row.queued_at ?? undefined,
     startedAt: row.started_at ?? undefined,
     completedAt: row.completed_at ?? undefined,
@@ -100,6 +103,7 @@ export function mapTaskToDb(task: Partial<Task>): Partial<TaskDbRow> {
   if (task.retryCount !== undefined) dbRow.retry_count = task.retryCount;
   if (task.maxRetries !== undefined) dbRow.max_retries = task.maxRetries;
   if (task.createdAt !== undefined) dbRow.created_at = task.createdAt;
+  if (task.updatedAt !== undefined) dbRow.updated_at = task.updatedAt;
   if (task.queuedAt !== undefined) dbRow.queued_at = task.queuedAt;
   if (task.startedAt !== undefined) dbRow.started_at = task.startedAt;
   if (task.completedAt !== undefined) dbRow.completed_at = task.completedAt;

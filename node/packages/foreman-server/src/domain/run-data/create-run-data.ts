@@ -22,20 +22,27 @@ export async function createRunData(
 ): Promise<Result<RunData, Error>> {
   try {
     return await db.tx(async (t) => {
-      // Verify run and task exist and belong to org
-      const check = await t.oneOrNone<{ run_id: string }>(
-        `SELECT r.id as run_id
-         FROM run r
-         JOIN task t ON t.run_id = r.id
-         WHERE r.id = $(runId) 
-           AND t.id = $(taskId)
-           AND r.org_id = $(orgId)
-           AND t.org_id = $(orgId)`,
-        { runId: input.runId, taskId: input.taskId, orgId }
+      // Verify run exists and belongs to org
+      const runCheck = await t.oneOrNone<{ id: string }>(
+        `SELECT id FROM run WHERE id = $(runId) AND org_id = $(orgId)`,
+        { runId: input.runId, orgId }
       );
       
-      if (!check) {
-        return failure(new Error(`Run or task not found`));
+      if (!runCheck) {
+        return failure(new Error(`Run not found: ${input.runId}`));
+      }
+      
+      // Verify task exists and belongs to the run
+      const taskCheck = await t.oneOrNone<{ id: string }>(
+        `SELECT id FROM task 
+         WHERE id = $(taskId) 
+           AND run_id = $(runId) 
+           AND org_id = $(orgId)`,
+        { taskId: input.taskId, runId: input.runId, orgId }
+      );
+      
+      if (!taskCheck) {
+        return failure(new Error(`Task not found: ${input.taskId}`));
       }
       
       const id = uuidv4();

@@ -126,7 +126,14 @@ router.get('/', async (req, res) => {
       return;
     }
     
-    res.json(result.data);
+    res.json({
+      data: result.data.data,
+      pagination: {
+        total: result.data.total,
+        limit: result.data.limit,
+        offset: result.data.offset
+      }
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: 'Invalid request', details: error.errors });

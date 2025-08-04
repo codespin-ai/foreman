@@ -1,195 +1,157 @@
-import express from 'express';
-import helmet from 'helmet';
-import cors from 'cors';
-import compression from 'compression';
-import { Server } from 'http';
-import { createLogger } from '@codespin/foreman-logger';
-import { getDb, closeDb } from '@codespin/foreman-db';
+import { spawn, ChildProcess } from 'child_process';
 
-export interface TestServerConfig {
+export interface TestServerOptions {
   port?: number;
   dbName?: string;
+  maxRetries?: number;
+  retryDelay?: number;
 }
 
 export class TestServer {
-  private app: express.Application;
-  private server: Server | null = null;
+  private process: ChildProcess | null = null;
   private port: number;
-  private logger = createLogger('test-server');
+  private dbName: string;
+  private maxRetries: number;
+  private retryDelay: number;
 
-  constructor(config: TestServerConfig = {}) {
-    this.port = config.port || 5099;
-    this.app = express();
-    
-    // Set test database configuration to match test environment
-    if (config.dbName) {
-      process.env.FOREMAN_DB_NAME = config.dbName;
-    }
-    
-    // Ensure test server uses the same database credentials as test database
-    process.env.FOREMAN_DB_HOST = process.env.FOREMAN_DB_HOST || 'localhost';
-    process.env.FOREMAN_DB_PORT = process.env.FOREMAN_DB_PORT || '5432';
-    process.env.FOREMAN_DB_USER = process.env.FOREMAN_DB_USER || 'postgres';
-    process.env.FOREMAN_DB_PASSWORD = process.env.FOREMAN_DB_PASSWORD || 'postgres';
-    
-    this.setupMiddleware();
+  constructor(options: TestServerOptions = {}) {
+    this.port = options.port || 5099;
+    this.dbName = options.dbName || 'foreman_test';
+    this.maxRetries = options.maxRetries || 30;
+    this.retryDelay = options.retryDelay || 1000;
   }
 
-  private setupMiddleware(): void {
-    // Security middleware (minimal for testing)
-    this.app.use(helmet());
-    this.app.use(cors({
-      origin: '*',
-      credentials: true
-    }));
+  private async killProcessOnPort(): Promise<void> {
+    try {
+      // Find process using the port
+      const { execSync } = await import('child_process');
+      const pid = execSync(`lsof -ti:${this.port} || true`).toString().trim();
+      
+      if (pid) {
+        // Killing process using port
+        execSync(`kill -9 ${pid}`);
+        // Wait a bit for the process to die
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    } catch {
+      // Ignore errors - port might already be free
+    }
+  }
 
-    // Request parsing
-    this.app.use(express.json({ limit: '10mb' }));
-    this.app.use(express.urlencoded({ extended: true }));
-    this.app.use(compression());
+  async start(): Promise<void> {
+    // Kill any process using the port first
+    await this.killProcessOnPort();
+    
+    return new Promise((resolve, reject) => {
+      // Starting test server
+      
+      // Set environment variables for test server
+      // Override the FOREMAN database name for tests
+      const env = {
+        ...process.env,
+        NODE_ENV: 'test',
+        FOREMAN_SERVER_PORT: this.port.toString(),
+        FOREMAN_DB_HOST: process.env.FOREMAN_DB_HOST || 'localhost',
+        FOREMAN_DB_PORT: process.env.FOREMAN_DB_PORT || '5432',
+        FOREMAN_DB_NAME: this.dbName, // Use test database
+        FOREMAN_DB_USER: process.env.FOREMAN_DB_USER || 'postgres',
+        FOREMAN_DB_PASSWORD: process.env.FOREMAN_DB_PASSWORD || 'postgres',
+      };
 
-    // Request logging (minimal for testing)
-    this.app.use((req, res, next) => {
-      const start = Date.now();
-      res.on('finish', () => {
-        const duration = Date.now() - start;
-        if (process.env.TEST_VERBOSE === 'true') {
-          this.logger.info('Request completed', {
-            method: req.method,
-            url: req.url,
-            status: res.statusCode,
-            duration
-          });
+      // Start the server directly
+      const serverPath = new URL('../../../foreman-server/dist/index.js', import.meta.url).pathname;
+      
+      this.process = spawn('node', [serverPath], {
+        env,
+        stdio: ['ignore', 'pipe', 'inherit'], // Show stderr output directly
+        cwd: new URL('../../../foreman-server/', import.meta.url).pathname
+      });
+
+      let serverStarted = false;
+
+      this.process.stdout?.on('data', (data) => {
+        const output = data.toString();
+        // Server output received
+        
+        // Check if server is ready
+        if (output.includes('Server running')) {
+          serverStarted = true;
+          resolve(); // Resolve immediately when server is ready
         }
       });
-      next();
+
+      this.process.on('error', (error) => {
+        console.error('Failed to start server:', error);
+        reject(error);
+      });
+
+      this.process.on('exit', (code) => {
+        if (!serverStarted && code !== 0) {
+          reject(new Error(`Server exited with code ${code}`));
+        }
+      });
+
+      // Wait for server to be ready
+      this.waitForServer()
+        .then(() => {
+          // Test server is ready
+          resolve();
+        })
+        .catch(reject);
     });
   }
 
-  private async setupRoutes(): Promise<void> {
-    // Dynamic import to avoid circular dependencies
-    let runsRouter: any, tasksRouter: any, runDataRouter: any, configRouter: any;
+  private async waitForServer(): Promise<void> {
+    for (let i = 0; i < this.maxRetries; i++) {
+      try {
+        const response = await fetch(`http://localhost:${this.port}/health`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (response.ok) {
+          return;
+        }
+      } catch {
+        // Server not ready yet
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, this.retryDelay));
+    }
     
-    try {
-      const serverPath = '@codespin/foreman-server';
-      ({ runsRouter } = await import(`${serverPath}/routes/runs.js`));
-      ({ tasksRouter } = await import(`${serverPath}/routes/tasks.js`));
-      ({ runDataRouter } = await import(`${serverPath}/routes/run-data.js`));
-      ({ configRouter } = await import(`${serverPath}/routes/config.js`));
-    } catch (error) {
-      // Routes not available yet, create placeholder routers
-      this.logger.warn('Could not load server routes, using placeholder routers', { error: error instanceof Error ? error.message : String(error) });
-      
-      const notImplemented = (_req: any, res: any) => {
-        res.status(501).json({ error: 'Route not implemented in test server' });
-      };
-      
-      // Create proper Express router placeholders
-      runsRouter = express.Router();
-      runsRouter.use(notImplemented);
-      
-      tasksRouter = express.Router();
-      tasksRouter.use(notImplemented);
-      
-      runDataRouter = express.Router();
-      runDataRouter.use(notImplemented);
-      
-      configRouter = express.Router();
-      configRouter.use(notImplemented);
-    }
-
-    // Health check (no auth required)
-    this.app.get('/health', (_req, res) => {
-      res.json({ 
-        status: 'healthy', 
-        timestamp: new Date().toISOString(),
-        environment: 'test' 
-      });
-    });
-
-    // API routes
-    this.app.use('/api/v1/runs', runsRouter);
-    this.app.use('/api/v1/tasks', tasksRouter);
-    this.app.use('/api/v1/runs/:runId/data', runDataRouter);
-    this.app.use('/api/v1/config', configRouter);
-
-    // 404 handler
-    this.app.use((_req, res) => {
-      res.status(404).json({ error: 'Not found' });
-    });
-
-    // Error handler
-    this.app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-      this.logger.error('Unhandled error', { error: err });
-      res.status(500).json({ error: 'Internal server error' });
-    });
+    throw new Error(`Server failed to start after ${this.maxRetries} attempts`);
   }
 
-  public async start(): Promise<void> {
-    if (this.server) {
-      this.logger.warn('Server already running');
-      return;
-    }
-
-    try {
-      // Setup routes with dynamic imports
-      await this.setupRoutes();
-      
-      // Test database connection
-      const db = getDb();
-      await db.one('SELECT 1 as ok');
-      this.logger.info('Database connection established');
-      
-      // Start listening
-      await new Promise<void>((resolve, reject) => {
-        this.server = this.app.listen(this.port, (err?: Error) => {
-          if (err) {
-            reject(err);
-          } else {
-            this.logger.info(`Test server running on port ${this.port}`);
+  async stop(): Promise<void> {
+    if (this.process) {
+      return new Promise((resolve) => {
+        let resolved = false;
+        
+        const cleanup = () => {
+          if (!resolved) {
+            resolved = true;
+            this.process = null;
             resolve();
           }
-        });
-      });
-    } catch (error) {
-      this.logger.error('Failed to start test server', { error });
-      throw error;
-    }
-  }
-
-  public async stop(): Promise<void> {
-    if (!this.server) {
-      this.logger.warn('Server not running');
-      return;
-    }
-
-    try {
-      await new Promise<void>((resolve, reject) => {
-        this.server!.close((err?: Error) => {
-          if (err) {
-            reject(err);
-          } else {
-            this.logger.info('Test server stopped');
-            resolve();
+        };
+        
+        // Set up exit handler
+        this.process!.on('exit', cleanup);
+        
+        // Try graceful shutdown
+        this.process!.kill('SIGTERM');
+        
+        // Force kill after 2 seconds and resolve
+        setTimeout(async () => {
+          if (this.process && !resolved) {
+            this.process.kill('SIGKILL');
+            // Also kill any process on the port just to be sure
+            await this.killProcessOnPort();
+            // Give it a moment to actually die
+            setTimeout(cleanup, 100);
           }
-        });
+        }, 2000);
       });
-      
-      this.server = null;
-      
-      // Close database connections
-      await closeDb();
-    } catch (error) {
-      this.logger.error('Error stopping test server', { error });
-      throw error;
     }
-  }
-
-  public getPort(): number {
-    return this.port;
-  }
-
-  public getApp(): express.Application {
-    return this.app;
   }
 }

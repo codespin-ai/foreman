@@ -1,10 +1,8 @@
-import { TestDatabase, TestHttpClient } from '@codespin/foreman-test-utils';
-import { spawn, ChildProcess } from 'child_process';
+import { TestDatabase, TestServer, TestHttpClient } from '@codespin/foreman-test-utils';
 
 export const testDb = new TestDatabase({ dbName: 'foreman_client_test' });
+export const testServer = new TestServer({ port: 5003, dbName: 'foreman_client_test' });
 export const client = new TestHttpClient(`http://localhost:5003`);
-
-let serverProcess: ChildProcess | null = null;
 
 // Test configuration for client library
 export const getTestConfig = () => ({
@@ -23,88 +21,10 @@ before(async function() {
   await testDb.setup();
   
   // Start the real Foreman server
-  await startForemanServer();
+  await testServer.start();
   
   console.log('✅ Foreman client test setup complete');
 });
-
-async function startForemanServer(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // Set environment variables for test database
-    const env = {
-      ...process.env,
-      FOREMAN_DB_NAME: 'foreman_client_test',
-      FOREMAN_DB_HOST: 'localhost',
-      FOREMAN_DB_PORT: '5432',
-      FOREMAN_DB_USER: 'postgres',
-      FOREMAN_DB_PASSWORD: 'postgres',
-      FOREMAN_SERVER_PORT: '5003',
-      NODE_ENV: 'test'
-    };
-
-    // Start the foreman-server process
-    serverProcess = spawn('node', ['dist/index.js'], {
-      cwd: '../../../node/packages/foreman-server',
-      env,
-      stdio: ['ignore', 'pipe', 'pipe']
-    });
-
-    let startupTimeout: NodeJS.Timeout;
-
-    serverProcess.stdout?.on('data', (data) => {
-      const output = data.toString();
-      console.log('Server output:', output);
-      
-      // Look for server startup message
-      if (output.includes('Server running')) {
-        clearTimeout(startupTimeout);
-        resolve();
-      }
-    });
-
-    serverProcess.stderr?.on('data', (data) => {
-      console.error('Server error:', data.toString());
-    });
-
-    serverProcess.on('error', (error) => {
-      clearTimeout(startupTimeout);
-      reject(new Error(`Failed to start server: ${error.message}`));
-    });
-
-    serverProcess.on('exit', (code) => {
-      if (code !== 0) {
-        clearTimeout(startupTimeout);
-        reject(new Error(`Server exited with code ${code}`));
-      }
-    });
-
-    // Timeout after 30 seconds
-    startupTimeout = setTimeout(() => {
-      reject(new Error('Server startup timeout'));
-    }, 30000);
-  });
-}
-
-async function stopForemanServer(): Promise<void> {
-  if (serverProcess) {
-    return new Promise((resolve) => {
-      serverProcess!.on('exit', () => {
-        serverProcess = null;
-        resolve();
-      });
-      
-      // Try graceful shutdown first
-      serverProcess!.kill('SIGTERM');
-      
-      // Force kill after 5 seconds
-      setTimeout(() => {
-        if (serverProcess) {
-          serverProcess.kill('SIGKILL');
-        }
-      }, 5000);
-    });
-  }
-}
 
 // Cleanup after each test
 afterEach(async function() {
@@ -118,7 +38,7 @@ after(async function() {
   console.log('🛑 Shutting down Foreman client tests...');
   
   // Stop server
-  await stopForemanServer();
+  await testServer.stop();
   
   // Cleanup database
   await testDb.cleanup();

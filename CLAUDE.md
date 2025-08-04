@@ -98,6 +98,27 @@ npm run seed:foreman:make seed_name
 npm run seed:foreman:run
 ```
 
+### Recent Database Migrations
+
+1. **Initial Schema** (`20250803000000_initial_schema.js`)
+   - Core tables: `run`, `task`, `run_data`
+   - Basic indexes and constraints
+   - Initial unique constraint on `run_data(run_id, key)`
+
+2. **Add Tags to Run Data** (`20250803120000_add_tags_to_run_data.js`)
+   - Added `tags` column as `text[]` to `run_data` table
+   - Added GIN index for efficient tag queries
+
+3. **Add Updated At to Run and Task** (`20250804060438_add_updated_at_to_run.js`)
+   - Added `updated_at` column to both `run` and `task` tables
+   - Added PostgreSQL triggers to auto-update timestamps
+   - Ensures updatedAt is always current when status changes
+
+4. **Remove Unique Constraint on Run Data** (`20250804061803_remove_unique_constraint_on_run_data.js`)
+   - Dropped unique constraint on `run_data(run_id, key)`
+   - Allows multiple values per key for append-only patterns
+   - Enables event sourcing and audit trail use cases
+
 ## Package Structure
 
 Located in `/node/packages/`, build order matters:
@@ -238,6 +259,8 @@ const task = await foreman.createTask({ /* ... */ });
 - No database storage (fully trusted environment)
 - Organization ID extracted from key
 - All authenticated users have full access
+- Supports both `x-api-key` header and `Authorization: Bearer` format
+- Can be disabled via environment variables for testing
 
 ## Common Tasks
 
@@ -265,94 +288,100 @@ const task = await foreman.createTask({ /* ... */ });
 
 ## Testing & Quality
 
-### Test Architecture Overview
+### Two-Layer Testing Architecture
 
-Foreman uses a comprehensive two-layer testing architecture:
+Foreman implements a comprehensive testing strategy with two distinct test suites:
 
-1. **@codespin/foreman-test-utils**: Shared test infrastructure
-2. **Integration Tests**: Full API testing with real server
-3. **Client Tests**: Client library testing
+#### 1. Integration Tests (`foreman-integration-tests`)
+- **Purpose**: Test the REST API directly using HTTP requests
+- **Database**: Uses `foreman_test` database
+- **Server**: Spawns real Foreman server on port 5099
+- **Coverage**: 49 tests covering all API endpoints
+- **Location**: `/node/packages/foreman-integration-tests`
+- **Key Features**:
+  - Direct HTTP testing of all endpoints
+  - Authentication middleware validation
+  - Error handling and edge cases
+  - Pagination and filtering tests
+  - Database constraint validation
 
-### Test Infrastructure (`@codespin/foreman-test-utils`)
+#### 2. Client Tests (`foreman-client`)
+- **Purpose**: Test the TypeScript client library
+- **Database**: Uses `foreman_client_test` database  
+- **Server**: Spawns real Foreman server on port 5003
+- **Coverage**: 18 tests covering all client functions
+- **Location**: `/node/packages/foreman-client/src/tests`
+- **Key Features**:
+  - Result type validation
+  - Error propagation testing
+  - Configuration handling
+  - API integration through client SDK
 
-**TestServer**: Spawns real Foreman server process for tests
-- Manages server lifecycle (start/stop)
-- Handles database environment setup
-- Waits for server readiness
-- Graceful shutdown with port cleanup
+### Test Utilities (`foreman-test-utils`)
 
-**TestDatabase**: Fresh database setup for each test run
-- Drops and recreates test database
-- Runs all migrations from scratch
-- Provides table truncation between tests
-- Ensures clean schema state
+Shared test infrastructure package providing:
+- `TestServer`: Manages Foreman server lifecycle for tests
+- `TestDatabase`: Handles test database setup/teardown
+- `TestHttpClient`: Axios-based HTTP client for integration tests
 
-**TestHttpClient**: REST API testing client
-- Enhanced response handling with metadata
-- Authentication helpers for API keys
-- Request/response logging for debugging
+This package is used as a devDependency by both test suites, eliminating code duplication while keeping the client package clean for npm publishing.
 
-### Running Tests
-
-**Prerequisites**: Ensure PostgreSQL container is running:
+### Test Commands
 ```bash
-cd devenv && ./run.sh up
+# Integration tests
+npm run test:integration:foreman       # Run all integration tests
+npm run test:integration:foreman:watch  # Run integration tests in watch mode
+npm run test:grep -- "Pattern"         # Run specific integration test suite
+
+# Client tests
+npm run test:client                    # Run all client tests
+npm run test:client:watch              # Run client tests in watch mode
+npm run test:client:grep -- "Pattern"  # Run specific client test suite
+
+# All tests
+npm run test:integration:all           # Run all tests (integration + client)
 ```
-
-**Integration Tests** (49 comprehensive tests):
-```bash
-# Run all integration tests
-npm run test:integration:foreman
-
-# Watch mode
-npm run test:integration:foreman:watch
-```
-
-**Client Tests** (12 client library tests):
-```bash
-# Run all client tests  
-npm run test:client
-
-# Watch mode
-npm run test:client:watch
-```
-
-**All Tests**:
-```bash
-# Run both integration and client tests
-npm run test:integration:all
-```
-
-### Test Configuration
-
-**Integration Tests**:
-- Uses `foreman_test` database on port 5099
-- Tests all REST API endpoints against real server
-- Covers CRUD, pagination, filtering, error handling
-
-**Client Tests**:
-- Uses `foreman_client_test` database on port 5003  
-- Tests client library functions and Result types
-- Validates configuration, API calls, error handling
 
 ### Test Database Management
 
-**Fresh Database Per Test Run**:
-- Each test session drops and recreates test databases
-- All migrations run from scratch ensuring current schema
-- Data cleared between individual tests via `truncateAllTables()`
-- Complete isolation between test runs
+- Each test suite uses its own database to allow parallel execution
+- Databases are dropped and recreated with fresh migrations before each test run
+- Tables are truncated between individual tests for isolation
+- Migration state is properly tracked in the test databases
 
-### Testing Best Practices
+### Running Tests
 
-- **Always run individual tests** when debugging specific issues
-- **Use grep patterns** to run specific test suites: `npm run test:grep -- "test name"`
-- **Test incrementally** - run specific failing test after each change
-- **Run full suite** only after individual tests pass
-- **Use Result types** for all async operations in tests
-- **Validate inputs** with Zod schemas in route tests
-- **Log errors** with context for debugging
-- **Follow TypeScript strict mode** for type safety
+#### Prerequisites
+```bash
+# Start PostgreSQL
+cd devenv
+./run.sh up
+```
+
+#### Test Execution
+```bash
+# Run all tests
+npm run test:integration:all
+
+# Run specific suite with grep
+npm run test:grep -- "Run Data API"
+npm run test:client:grep -- "should create run data"
+```
+
+### Testing Guidelines for Debugging and Fixes
+
+**IMPORTANT**: When fixing bugs or debugging issues:
+1. **Always run individual tests** when fixing specific issues
+2. Use `npm run test:grep -- "test name"` to run specific test suites
+3. Use `npm run test:client:grep -- "test name"` for client-specific tests
+4. Test incrementally - run the specific failing test after each change
+5. Only run the full test suite after individual tests pass
+
+This approach:
+- Provides faster feedback loops
+- Makes debugging easier
+- Prevents breaking other tests while fixing one
+- Saves time during development
 
 ## Important Notes
 
@@ -375,6 +404,51 @@ const taskData = await foreman.getTask(taskId);
 - Organization ID extracted from API key
 - Rate limiting on endpoints
 - No permission checks - all authenticated users have full access
+
+### API Response Formats
+
+#### Pagination
+All list endpoints return paginated results with this structure:
+```typescript
+{
+  data: T[],
+  pagination: {
+    total: number,
+    limit: number,
+    offset: number
+  }
+}
+```
+
+#### Error Responses
+- 400: Invalid request data or validation errors
+- 401: Authentication required or invalid API key
+- 404: Resource not found
+- 500: Internal server error
+
+Error format:
+```json
+{
+  "error": "Error message",
+  "details": []  // Optional, for validation errors
+}
+```
+
+### Run Data Query API
+
+The `GET /api/v1/runs/:runId/data` endpoint supports flexible querying:
+
+- `key`: Exact key match
+- `keys`: Multiple exact keys (comma-separated)
+- `keyStartsWith`: Key prefix match
+- `keyPattern`: Glob pattern for keys
+- `tags`: Filter by tags (comma-separated)
+- `tagStartsWith`: Tag prefix match
+- `tagMode`: 'any' (default) or 'all'
+- `includeAll`: Return all values (not just latest per key)
+- `sortBy`: 'created_at' (default), 'updated_at', or 'key'
+- `sortOrder`: 'desc' (default) or 'asc'
+- Standard pagination: `limit`, `offset`
 
 ## Error Handling
 

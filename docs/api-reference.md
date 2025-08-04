@@ -1,12 +1,34 @@
 # Foreman API Reference
 
+## Table of Contents
+
+- [Authentication](#authentication)
+- [Base URL](#base-url)
+- [Endpoints](#endpoints)
+  - [Health Check](#health-check)
+  - [Configuration](#configuration)
+  - [Runs](#runs)
+  - [Tasks](#tasks)
+  - [Run Data](#run-data)
+- [Status Codes](#status-codes)
+- [Error Response Format](#error-response-format)
+- [Additional Information](#additional-information)
+
 ## Authentication
 
-All API requests require authentication using an API key in the Authorization header:
+All API endpoints (except `/api/v1/health`) require authentication. You can use either:
 
-```
-Authorization: Bearer your-api-key-here
-```
+1. **Bearer token** in Authorization header:
+   ```
+   Authorization: Bearer fmn_prod_org123_randomstring
+   ```
+
+2. **API key** in x-api-key header:
+   ```
+   x-api-key: fmn_prod_org123_randomstring
+   ```
+
+The API key format is: `fmn_[environment]_[organizationId]_[random]`
 
 ## Base URL
 
@@ -15,6 +37,68 @@ http://localhost:3000/api/v1
 ```
 
 ## Endpoints
+
+### Health Check
+
+#### Health Status
+```http
+GET /api/v1/health
+```
+
+**Note**: This endpoint does not require authentication.
+
+Response:
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "environment": "production",
+  "services": {
+    "database": "connected",
+    "redis": "connected"
+  }
+}
+```
+
+### Configuration
+
+#### Get Configuration
+```http
+GET /api/v1/config
+```
+
+Returns the full configuration including Redis and queue settings.
+
+Response:
+```json
+{
+  "version": "1.0.0",
+  "environment": "production",
+  "redis": {
+    "host": "localhost",
+    "port": 6379,
+    "db": 0
+  },
+  "queues": {
+    "taskQueue": "foreman:tasks",
+    "resultQueue": "foreman:results"
+  }
+}
+```
+
+#### Get Redis Configuration
+```http
+GET /api/v1/config/redis
+```
+
+Returns only the Redis configuration.
+
+#### Get Queue Configuration
+```http
+GET /api/v1/config/queues
+```
+
+Returns only the queue names configuration.
 
 ### Runs
 
@@ -78,10 +162,12 @@ GET /runs?limit=20&offset=0&status=pending&sortBy=created_at&sortOrder=desc
 Response:
 ```json
 {
-  "items": [ /* array of runs */ ],
-  "total": 100,
-  "limit": 20,
-  "offset": 0
+  "data": [ /* array of runs */ ],
+  "pagination": {
+    "total": 100,
+    "limit": 20,
+    "offset": 0
+  }
 }
 ```
 
@@ -152,6 +238,31 @@ Request Body:
 ```
 
 Response: Updated task object
+
+#### List Tasks
+```http
+GET /tasks?limit=20&offset=0&runId=uuid&status=pending&sortBy=created_at&sortOrder=desc
+```
+
+Query Parameters:
+- `runId` - Filter by run ID
+- `status` - Filter by status
+- `limit` - Max results (default: 20)
+- `offset` - Pagination offset (default: 0)
+- `sortBy` - Sort field (default: created_at)
+- `sortOrder` - Sort order: asc or desc (default: desc)
+
+Response:
+```json
+{
+  "data": [ /* array of tasks */ ],
+  "pagination": {
+    "total": 100,
+    "limit": 20,
+    "offset": 0
+  }
+}
+```
 
 ### Run Data
 
@@ -288,11 +399,10 @@ Response:
 
 ## Status Codes
 
-- `200 OK` - Successful GET/PATCH requests
+- `200 OK` - Successful GET/PATCH/DELETE requests
 - `201 Created` - Successful POST requests
-- `400 Bad Request` - Invalid request data
+- `400 Bad Request` - Invalid request data or validation errors
 - `401 Unauthorized` - Missing or invalid API key
-- `403 Forbidden` - Insufficient permissions
 - `404 Not Found` - Resource not found
 - `429 Too Many Requests` - Rate limit exceeded
 - `500 Internal Server Error` - Server error
@@ -306,14 +416,24 @@ Response:
 }
 ```
 
-## Authentication
+## Additional Information
 
-All endpoints require authentication using a Bearer token:
+### Response Fields
 
-```
-Authorization: Bearer fmn_[environment]_[organizationId]_[random]
-```
+All timestamps include:
+- `createdAt` - When the resource was created
+- `updatedAt` - When the resource was last modified (for run and task)
 
-Example: `Authorization: Bearer fmn_prod_myorg_abc123`
+### Run Data Multiple Values
 
-Since Foreman runs in a fully trusted environment, authenticated users have full access to all operations within their organization.
+The run data storage allows multiple values for the same key. This is useful for:
+- Event logging (multiple log entries with same key)
+- Time series data
+- Audit trails
+- Progress tracking
+
+By default, queries return only the latest value per key. Use `includeAll=true` to get all values.
+
+### Rate Limiting
+
+Default rate limit: 100 requests per 15 minutes per API key.

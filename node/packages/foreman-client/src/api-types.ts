@@ -144,8 +144,10 @@ export type PaginationParams = {
 };
 
 export type PaginatedResult<T> = {
-  items: T[];
-  total: number;
-  limit: number;
-  offset: number;
+  data: T[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+  };
 };

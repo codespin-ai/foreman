@@ -85,11 +85,17 @@ The REST API will be available at `http://localhost:3000`.
 
 ### Authentication
 
-All API endpoints require authentication using a Bearer token in the Authorization header:
+All API endpoints (except health check) require authentication. You can use either:
 
-```
-Authorization: Bearer fmn_prod_org123_randomstring
-```
+1. **Bearer token** in Authorization header:
+   ```
+   Authorization: Bearer fmn_prod_org123_randomstring
+   ```
+
+2. **API key** in x-api-key header:
+   ```
+   x-api-key: fmn_prod_org123_randomstring
+   ```
 
 The API key format is: `fmn_[environment]_[organizationId]_[random]`
 
@@ -98,23 +104,27 @@ Since Foreman runs in a fully trusted environment, the authentication is simplif
 - No database validation - API key format is validated only
 - Organization ID is extracted from the API key
 
-For testing, you can use:
-- Header: `x-api-key: test-api-key`
-- This will use `test-org` as the organization ID
+For testing:
+- Set `FOREMAN_API_KEY` environment variable to use a specific test key
+- Authentication can be disabled by not setting `FOREMAN_API_KEY_ENABLED` or `FOREMAN_API_KEY`
+
+### Health Check
+
+- `GET /api/v1/health` - Health check endpoint (no authentication required)
 
 ### Runs
 
 - `POST /api/v1/runs` - Create a new run
 - `GET /api/v1/runs/:id` - Get run details
 - `PATCH /api/v1/runs/:id` - Update run status
-- `GET /api/v1/runs` - List runs with filtering
+- `GET /api/v1/runs` - List runs with pagination and filtering
 
 ### Tasks
 
 - `POST /api/v1/tasks` - Create a new task
 - `GET /api/v1/tasks/:id` - Get task details
 - `PATCH /api/v1/tasks/:id` - Update task status
-- `GET /api/v1/tasks` - List tasks with filtering
+- `GET /api/v1/tasks` - List tasks with pagination and filtering
 
 ### Run Data
 
@@ -347,13 +357,61 @@ foreman/
 
 ### Running Tests
 
+#### Prerequisites
+
+Before running tests, ensure PostgreSQL is running:
+
 ```bash
-# Run all tests
+# Start development environment
+cd devenv
+./run.sh up
+
+# Verify PostgreSQL is running
+./run.sh logs postgres
+```
+
+#### Test Commands
+
+```bash
+# Run all tests (integration + client)
 npm run test:integration:all
+
+# Run integration tests only
+npm run test:integration:foreman
+
+# Run client tests only
+npm run test:client
+
+# Run specific test suite
+npm run test:grep -- "Organizations"
+npm run test:client:grep -- "Run Management"
 
 # Run with watch mode
 npm run test:integration:foreman:watch
+npm run test:client:watch
 ```
+
+#### Test Infrastructure
+
+Foreman uses a two-layer testing architecture:
+
+1. **Integration Tests** (`foreman-integration-tests`):
+   - Test the REST API directly using HTTP requests
+   - Use a real Foreman server instance
+   - Located in `/node/packages/foreman-integration-tests`
+   - 49 tests covering all API endpoints
+
+2. **Client Tests** (`foreman-client`):
+   - Test the TypeScript client library
+   - Validate Result types and error handling
+   - Located in `/node/packages/foreman-client/src/tests`
+   - 18 tests covering all client functions
+
+Both test suites:
+- Use separate test databases (`foreman_test`, `foreman_client_test`)
+- Run fresh migrations before each test suite
+- Truncate tables between tests for isolation
+- Support grep patterns for running specific tests
 
 ### Building
 

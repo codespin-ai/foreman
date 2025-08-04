@@ -66,7 +66,7 @@ describe('Foreman Client API', () => {
       expect(result.success).to.be.true;
       if (result.success) {
         expect(result.data).to.have.property('id');
-        expect(result.data).to.have.property('orgId', 'test-org');
+        expect(result.data).to.have.property('orgId', 'clientorg');
         expect(result.data).to.have.property('status', 'pending');
         expect(result.data).to.have.property('inputData');
         expect(result.data.inputData).to.deep.equal({ type: 'test-workflow', orderId: '12345' });
@@ -130,11 +130,11 @@ describe('Foreman Client API', () => {
 
       expect(result.success).to.be.true;
       if (result.success) {
-        expect(result.data).to.have.property('items');
-        expect(result.data).to.have.property('total');
-        expect(result.data.items).to.have.lengthOf(2);
-        expect(result.data.total).to.equal(3);
-        expect(result.data.limit).to.equal(2);
+        expect(result.data).to.have.property('data');
+        expect(result.data).to.have.property('pagination');
+        expect(result.data.data).to.have.lengthOf(2);
+        expect(result.data.pagination.total).to.equal(3);
+        expect(result.data.pagination.limit).to.equal(2);
       }
     });
 
@@ -292,7 +292,7 @@ describe('Foreman Client API', () => {
       });
 
       // Query all data
-      const result = await queryRunData(config, runId);
+      const result = await queryRunData(config, runId, { includeAll: true });
 
       expect(result.success).to.be.true;
       if (result.success) {
@@ -319,7 +319,7 @@ describe('Foreman Client API', () => {
       });
 
       // Query by key
-      const keyResult = await queryRunData(config, runId, { key: 'user-data' });
+      const keyResult = await queryRunData(config, runId, { key: 'user-data', includeAll: true });
       expect(keyResult.success).to.be.true;
       if (keyResult.success) {
         expect(keyResult.data.data).to.have.lengthOf(1);
@@ -327,7 +327,7 @@ describe('Foreman Client API', () => {
       }
 
       // Query by tags
-      const tagResult = await queryRunData(config, runId, { tags: ['config'] });
+      const tagResult = await queryRunData(config, runId, { tags: ['config'], includeAll: true });
       expect(tagResult.success).to.be.true;
       if (tagResult.success) {
         expect(tagResult.data.data).to.have.lengthOf(1);
@@ -379,7 +379,7 @@ describe('Foreman Client API', () => {
       }
 
       // Verify deletion
-      const queryResult = await queryRunData(config, runId, { key: 'temp-data' });
+      const queryResult = await queryRunData(config, runId, { key: 'temp-data', includeAll: true });
       expect(queryResult.success).to.be.true;
       if (queryResult.success) {
         expect(queryResult.data.data).to.have.lengthOf(0);
@@ -417,17 +417,17 @@ describe('Foreman Client API', () => {
       expect(result.success).to.be.false;
       if (!result.success) {
         expect(result.error).to.be.instanceOf(Error);
-        expect(result.error.message).to.include('401');
+        expect(result.error.message).to.include('Invalid API key format');
       }
     });
 
     it('should handle not found errors', async () => {
-      const result = await getRun(config, 'non-existent-id');
+      const result = await getRun(config, '00000000-0000-0000-0000-000000000000');
 
       expect(result.success).to.be.false;
       if (!result.success) {
         expect(result.error).to.be.instanceOf(Error);
-        expect(result.error.message).to.include('404');
+        expect(result.error.message).to.include('not found');
       }
     });
   });

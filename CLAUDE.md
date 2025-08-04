@@ -105,9 +105,10 @@ Located in `/node/packages/`, build order matters:
 1. **@codespin/foreman-core** - Core types and Result utilities
 2. **@codespin/foreman-logger** - Centralized logging with pino
 3. **@codespin/foreman-db** - Database connection management
-4. **@codespin/foreman-server** - REST API server
-5. **@codespin/foreman-client** - Client library for API access
-6. **@codespin/foreman-integration-tests** - Integration test suite
+4. **@codespin/foreman-test-utils** - Shared test utilities and infrastructure
+5. **@codespin/foreman-server** - REST API server
+6. **@codespin/foreman-client** - Client library for API access (published to npm)
+7. **@codespin/foreman-integration-tests** - Integration tests using REST API (separate from production build)
 
 ## Development Workflow
 
@@ -117,7 +118,7 @@ Located in `/node/packages/`, build order matters:
 4. **Add Routes**: Implement REST endpoints in `foreman-server/src/routes/`
 5. **Update Client**: Add methods to `foreman-client` if needed
 6. **Build**: Run `./build.sh` from root
-7. **Test**: Add integration tests in `foreman-integration-tests`
+7. **Test**: Add integration tests in `foreman-integration-tests` and client tests in `foreman-client`
 
 ## Environment Variables
 
@@ -264,20 +265,96 @@ const task = await foreman.createTask({ /* ... */ });
 
 ## Testing & Quality
 
-- Integration tests in `foreman-integration-tests`
-- Use Result types for all async operations
-- Validate all inputs with Zod
-- Log errors with context
-- Follow TypeScript strict mode
+### Test Architecture Overview
+
+Foreman uses a comprehensive two-layer testing architecture:
+
+1. **@codespin/foreman-test-utils**: Shared test infrastructure
+2. **Integration Tests**: Full API testing with real server
+3. **Client Tests**: Client library testing
+
+### Test Infrastructure (`@codespin/foreman-test-utils`)
+
+**TestServer**: Spawns real Foreman server process for tests
+- Manages server lifecycle (start/stop)
+- Handles database environment setup
+- Waits for server readiness
+- Graceful shutdown with port cleanup
+
+**TestDatabase**: Fresh database setup for each test run
+- Drops and recreates test database
+- Runs all migrations from scratch
+- Provides table truncation between tests
+- Ensures clean schema state
+
+**TestHttpClient**: REST API testing client
+- Enhanced response handling with metadata
+- Authentication helpers for API keys
+- Request/response logging for debugging
+
+### Running Tests
+
+**Prerequisites**: Ensure PostgreSQL container is running:
+```bash
+cd devenv && ./run.sh up
+```
+
+**Integration Tests** (49 comprehensive tests):
+```bash
+# Run all integration tests
+npm run test:integration:foreman
+
+# Watch mode
+npm run test:integration:foreman:watch
+```
+
+**Client Tests** (12 client library tests):
+```bash
+# Run all client tests  
+npm run test:client
+
+# Watch mode
+npm run test:client:watch
+```
+
+**All Tests**:
+```bash
+# Run both integration and client tests
+npm run test:integration:all
+```
+
+### Test Configuration
+
+**Integration Tests**:
+- Uses `foreman_test` database on port 5099
+- Tests all REST API endpoints against real server
+- Covers CRUD, pagination, filtering, error handling
+
+**Client Tests**:
+- Uses `foreman_client_test` database on port 5003  
+- Tests client library functions and Result types
+- Validates configuration, API calls, error handling
+
+### Test Database Management
+
+**Fresh Database Per Test Run**:
+- Each test session drops and recreates test databases
+- All migrations run from scratch ensuring current schema
+- Data cleared between individual tests via `truncateAllTables()`
+- Complete isolation between test runs
+
+### Testing Best Practices
+
+- **Always run individual tests** when debugging specific issues
+- **Use grep patterns** to run specific test suites: `npm run test:grep -- "test name"`
+- **Test incrementally** - run specific failing test after each change
+- **Run full suite** only after individual tests pass
+- **Use Result types** for all async operations in tests
+- **Validate inputs** with Zod schemas in route tests
+- **Log errors** with context for debugging
+- **Follow TypeScript strict mode** for type safety
 
 ## Important Notes
-
-### This is NOT GraphQL
-Unlike Permiso, Foreman uses REST API. Key differences:
-- No GraphQL schema or resolvers
-- RESTful endpoints with standard HTTP verbs
-- JSON request/response bodies
-- Client uses fetch instead of GraphQL client
 
 ### Queue Integration Pattern
 The core principle of Foreman:

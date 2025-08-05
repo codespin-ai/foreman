@@ -130,6 +130,10 @@ See [README.md](../README.md#project-structure) for package details. Key point: 
 6. **Build**: Run `./build.sh` from root
 7. **Test**: Add integration tests in `foreman-integration-tests` and client tests in `foreman-client`
 
+## Git Workflow
+
+**IMPORTANT**: NEVER commit and push changes without explicit user permission. When the user asks you to commit and push, follow the git commit guidelines in the main Claude system prompt.
+
 ## Configuration
 
 See [Configuration Documentation](docs/configuration.md) for all environment variables and settings.

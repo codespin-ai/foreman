@@ -78,7 +78,8 @@ export async function createWorker(params: {
         params.logger.error('Task failed', { taskId, error });
         
         // Update task as failed or retrying
-        const isLastAttempt = job.attemptsMade >= (params.options?.maxRetries || 3);
+        const maxAttempts = job.opts.attempts || 3;
+        const isLastAttempt = job.attemptsMade >= maxAttempts;
         await updateTask(params.foremanConfig, taskId, {
           status: isLastAttempt ? 'failed' : 'retrying',
           errorData: error instanceof Error ? { message: error.message, stack: error.stack } : error
@@ -99,8 +100,21 @@ export async function createWorker(params: {
     params.logger.debug('Job completed', { jobId: job.id, taskId: job.data.taskId });
   });
 
-  worker.on('failed', (job, err) => {
-    params.logger.error('Job failed', { jobId: job?.id, taskId: job?.data.taskId, error: err });
+  worker.on('failed', async (job, err) => {
+    if (!job) return;
+    
+    const { taskId } = job.data;
+    params.logger.error('Job permanently failed', { jobId: job.id, taskId, error: err });
+    
+    // Check if this is the final failure (no more retries)
+    const maxAttempts = job.opts.attempts || 3;
+    if (job.attemptsMade >= maxAttempts) {
+      // Update task as permanently failed
+      await updateTask(params.foremanConfig, taskId, {
+        status: 'failed',
+        errorData: err instanceof Error ? { message: err.message, stack: err.stack } : err
+      });
+    }
   });
 
   worker.on('error', (err) => {
@@ -110,7 +124,7 @@ export async function createWorker(params: {
   // Return control functions
   return {
     start: async () => {
-      await worker.run();
+      worker.run();
       params.logger.info('Worker started', { 
         queue: params.queueConfig.taskQueue,
         concurrency: params.options?.concurrency || 5 

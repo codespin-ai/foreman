@@ -1,8 +1,7 @@
-import { TestDatabase, TestServer, TestHttpClient } from '@codespin/foreman-test-utils';
-import { testLogger } from './test-logger.js';
+import { TestDatabase, TestServer, TestHttpClient, testLogger } from '@codespin/foreman-test-utils';
 
-export const testDb = new TestDatabase({ dbName: 'foreman_client_test' });
-export const testServer = new TestServer({ port: 5003, dbName: 'foreman_client_test' });
+export const testDb = new TestDatabase({ dbName: 'foreman_client_test', logger: testLogger });
+export const testServer = new TestServer({ port: 5003, dbName: 'foreman_client_test', logger: testLogger });
 export const client = new TestHttpClient(`http://localhost:5003`);
 
 // Test configuration for client library
@@ -16,28 +15,15 @@ export const getTestConfig = () => ({
 before(async function() {
   this.timeout(60000); // 60 seconds for setup
   
-  const isVerbose = process.env.VERBOSE_TESTS === 'true';
+  testLogger.info('🚀 Starting Foreman client test setup...');
   
-  // Temporarily override console.log for test utilities if not verbose
-  const originalLog = console.log;
-  if (!isVerbose) {
-    console.log = () => {};
-  }
+  // Setup database
+  await testDb.setup();
   
-  try {
-    testLogger.info('🚀 Starting Foreman client test setup...');
-    
-    // Setup database
-    await testDb.setup();
-    
-    // Start the real Foreman server
-    await testServer.start();
-    
-    testLogger.info('✅ Foreman client test setup complete');
-  } finally {
-    // Restore console.log
-    console.log = originalLog;
-  }
+  // Start the real Foreman server
+  await testServer.start();
+  
+  testLogger.info('✅ Foreman client test setup complete');
 });
 
 // Cleanup after each test

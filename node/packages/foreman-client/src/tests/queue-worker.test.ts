@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { Queue } from "bullmq";
+import { testLogger } from "@codespin/foreman-test-utils";
 import { testDb, getTestConfig } from "./setup.js";
-import { testLogger } from "./test-logger.js";
 import {
   createRun,
   getTask,

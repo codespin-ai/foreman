@@ -1,10 +1,12 @@
 import { spawn, ChildProcess } from 'child_process';
+import { Logger, consoleLogger } from './test-logger.js';
 
 export interface TestServerOptions {
   port?: number;
   dbName?: string;
   maxRetries?: number;
   retryDelay?: number;
+  logger?: Logger;
 }
 
 export class TestServer {
@@ -13,12 +15,14 @@ export class TestServer {
   private dbName: string;
   private maxRetries: number;
   private retryDelay: number;
+  private logger: Logger;
 
   constructor(options: TestServerOptions = {}) {
     this.port = options.port || 5099;
     this.dbName = options.dbName || 'foreman_test';
     this.maxRetries = options.maxRetries || 30;
     this.retryDelay = options.retryDelay || 1000;
+    this.logger = options.logger || consoleLogger;
   }
 
   private async killProcessOnPort(): Promise<void> {
@@ -83,7 +87,7 @@ export class TestServer {
       });
 
       this.process.on('error', (error) => {
-        console.error('Failed to start server:', error);
+        this.logger.error('Failed to start server:', error);
         reject(error);
       });
 

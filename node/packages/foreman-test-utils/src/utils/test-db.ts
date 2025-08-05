@@ -2,6 +2,7 @@ import knex from 'knex';
 import { Knex } from 'knex';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { Logger, consoleLogger } from './test-logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -11,11 +12,13 @@ export interface TestDatabaseConfig {
   port?: number;
   user?: string;
   password?: string;
+  logger?: Logger;
 }
 
 export class TestDatabase {
   private db: Knex | null = null;
   private config: TestDatabaseConfig;
+  private logger: Logger;
 
   constructor(config: TestDatabaseConfig = {}) {
     this.config = {
@@ -23,12 +26,14 @@ export class TestDatabase {
       host: config.host || process.env.FOREMAN_DB_HOST || 'localhost',
       port: config.port || parseInt(process.env.FOREMAN_DB_PORT || '5432'),
       user: config.user || process.env.FOREMAN_DB_USER || 'postgres',
-      password: config.password || process.env.FOREMAN_DB_PASSWORD || 'postgres'
+      password: config.password || process.env.FOREMAN_DB_PASSWORD || 'postgres',
+      logger: config.logger
     };
+    this.logger = config.logger || consoleLogger;
   }
 
   public async setup(): Promise<void> {
-    console.log(`📦 Setting up test database ${this.config.dbName}...`);
+    this.logger.info(`📦 Setting up test database ${this.config.dbName}...`);
 
     // First connect to postgres database to drop/create test database
     const adminDb = knex({
@@ -44,11 +49,11 @@ export class TestDatabase {
 
     try {
       // Drop test database if it exists
-      console.log(`Dropping database ${this.config.dbName} if it exists...`);
+      this.logger.info(`Dropping database ${this.config.dbName} if it exists...`);
       await adminDb.raw(`DROP DATABASE IF EXISTS "${this.config.dbName}"`);
       
       // Create fresh test database
-      console.log(`Creating fresh database ${this.config.dbName}...`);
+      this.logger.info(`Creating fresh database ${this.config.dbName}...`);
       await adminDb.raw(`CREATE DATABASE "${this.config.dbName}"`);
     } finally {
       await adminDb.destroy();
@@ -68,13 +73,13 @@ export class TestDatabase {
 
     // Run all migrations from scratch
     const migrationsPath = path.join(__dirname, '../../../../../database/foreman/migrations');
-    console.log(`Running full migrations from: ${migrationsPath}`);
+    this.logger.info(`Running full migrations from: ${migrationsPath}`);
     
     await this.db.migrate.latest({
       directory: migrationsPath
     });
 
-    console.log(`✅ Test database ${this.config.dbName} ready with fresh schema`);
+    this.logger.info(`✅ Test database ${this.config.dbName} ready with fresh schema`);
   }
 
   public async truncateAllTables(): Promise<void> {

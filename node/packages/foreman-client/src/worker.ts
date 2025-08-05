@@ -5,7 +5,7 @@
 
 import { Worker, Job } from 'bullmq';
 import type { ForemanConfig, RedisConfig, QueueConfig, TaskHandler, WorkerOptions, WorkerControls, Logger } from './types.js';
-import { updateTask } from './api.js';
+import { getTask, updateTask } from './api.js';
 
 /**
  * Create a worker that processes tasks
@@ -28,11 +28,22 @@ export async function createWorker(params: {
   const worker = new Worker(
     params.queueConfig.taskQueue,
     async (job: Job) => {
-      const { taskId, type, runId, inputData, metadata } = job.data;
+      const { taskId } = job.data;
       
-      params.logger.info('Processing task', { taskId, type, runId });
+      params.logger.info('Processing task', { taskId });
       
       try {
+        // Fetch full task data from database
+        const taskResult = await getTask(params.foremanConfig, taskId);
+        if (!taskResult.success) {
+          throw new Error(`Failed to fetch task ${taskId}: ${taskResult.error.message}`);
+        }
+        
+        const task = taskResult.data;
+        const { type, runId, inputData, metadata } = task;
+        
+        params.logger.info('Task data fetched', { taskId, type, runId });
+        
         // Update task status to running
         await updateTask(params.foremanConfig, taskId, {
           status: 'running',
@@ -64,7 +75,7 @@ export async function createWorker(params: {
         return result;
         
       } catch (error) {
-        params.logger.error('Task failed', { taskId, type, error });
+        params.logger.error('Task failed', { taskId, error });
         
         // Update task as failed or retrying
         const isLastAttempt = job.attemptsMade >= (params.options?.maxRetries || 3);

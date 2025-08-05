@@ -265,7 +265,18 @@ const task = await foreman.createTask({ /* ... */ });
 
 ## Testing
 
-See [README.md](../README.md#running-tests) for testing instructions.
+### Running Tests
+
+```bash
+# Run all integration tests (from root)
+npm run test:integration:all
+
+# Run specific test files
+npm run test:integration -- path/to/test.js
+
+# Run tests for a specific package
+cd node/packages/foreman-client && npm test
+```
 
 ### Testing Guidelines for Debugging and Fixes
 

@@ -66,11 +66,7 @@ export async function enqueueTask(params: {
     const job = await queue.add(
       params.task.type,
       {
-        taskId,
-        runId: params.task.runId,
-        type: params.task.type,
-        inputData: params.task.inputData,
-        metadata: params.task.metadata
+        taskId
       },
       {
         priority: params.task.priority,

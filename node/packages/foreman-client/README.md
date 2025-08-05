@@ -241,6 +241,10 @@ The client respects these environment variables when connecting to Foreman:
 - `FOREMAN_API_KEY` - Default API key for authentication
 - `FOREMAN_TIMEOUT` - Default request timeout in milliseconds
 
+### Testing
+
+- `VERBOSE_TESTS` - Set to `true` to enable verbose logging during tests (default: silent)
+
 ## License
 
 MIT

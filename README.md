@@ -496,6 +496,9 @@ npm run test:client:grep -- "Run Management"
 # Run with watch mode
 npm run test:integration:foreman:watch
 npm run test:client:watch
+
+# Run tests with verbose logging
+VERBOSE_TESTS=true npm run test:integration:all
 ```
 
 #### Test Infrastructure

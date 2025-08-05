@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import { Queue } from "bullmq";
 import { testDb, getTestConfig } from "./setup.js";
+import { testLogger } from "./test-logger.js";
 import {
   createRun,
   getTask,
@@ -76,7 +77,7 @@ describe("Queue and Worker Functions", () => {
     // Clean up queues
     await testQueue.obliterate({ force: true });
     await testQueue.close();
-    await closeQueues(console);
+    await closeQueues(testLogger);
   });
 
   describe("Queue Storage", () => {
@@ -111,7 +112,7 @@ describe("Queue and Worker Functions", () => {
             version: "1.0.0"
           }
         },
-        logger: console
+        logger: testLogger
       });
       
       expect(result.success).to.be.true;
@@ -143,7 +144,7 @@ describe("Queue and Worker Functions", () => {
           delay: 2000,
           maxRetries: 5
         },
-        logger: console
+        logger: testLogger
       });
       
       expect(result.success).to.be.true;
@@ -177,7 +178,7 @@ describe("Queue and Worker Functions", () => {
           inputData,
           metadata: { test: true }
         },
-        logger: console
+        logger: testLogger
       });
       
       expect(result.success).to.be.true;
@@ -194,7 +195,7 @@ describe("Queue and Worker Functions", () => {
             return { processed: true };
           }
         },
-        logger: console
+        logger: testLogger
       });
       
       activeWorkers.push(worker);
@@ -244,7 +245,7 @@ describe("Queue and Worker Functions", () => {
         options: {
           concurrency: 3
         },
-        logger: console
+        logger: testLogger
       });
       
       activeWorkers.push(worker);
@@ -261,7 +262,7 @@ describe("Queue and Worker Functions", () => {
           { runId, type: "type-c", inputData: {} },
           { runId, type: "type-a", inputData: {} },
         ],
-        logger: console
+        logger: testLogger
       });
       
       expect(tasks.success).to.be.true;
@@ -299,7 +300,7 @@ describe("Queue and Worker Functions", () => {
             return { completed: true };
           }
         },
-        logger: console
+        logger: testLogger
       });
       
       activeWorkers.push(worker);
@@ -315,7 +316,7 @@ describe("Queue and Worker Functions", () => {
           type: "status-test",
           inputData: {}
         },
-        logger: console
+        logger: testLogger
       });
       
       expect(createResult.success).to.be.true;
@@ -367,7 +368,7 @@ describe("Queue and Worker Functions", () => {
         options: {
           maxRetries: 3
         },
-        logger: console
+        logger: testLogger
       });
       
       activeWorkers.push(worker);
@@ -383,7 +384,7 @@ describe("Queue and Worker Functions", () => {
           inputData: {},
           maxRetries: 3
         },
-        logger: console
+        logger: testLogger
       });
       
       expect(result.success).to.be.true;
@@ -421,7 +422,7 @@ describe("Queue and Worker Functions", () => {
         options: {
           maxRetries: 2
         },
-        logger: console
+        logger: testLogger
       });
       
       activeWorkers.push(worker);
@@ -437,7 +438,7 @@ describe("Queue and Worker Functions", () => {
           inputData: {},
           maxRetries: 2
         },
-        logger: console
+        logger: testLogger
       });
       
       expect(result.success).to.be.true;
@@ -465,7 +466,7 @@ describe("Queue and Worker Functions", () => {
         handlers: {
           "any": async () => ({ processed: true })
         },
-        logger: console
+        logger: testLogger
       });
       
       activeWorkers.push(worker);
@@ -506,7 +507,7 @@ describe("Queue and Worker Functions", () => {
         options: {
           concurrency: 5 // Process 5 tasks at once
         },
-        logger: console
+        logger: testLogger
       });
       
       activeWorkers.push(worker);
@@ -527,7 +528,7 @@ describe("Queue and Worker Functions", () => {
         redisConfig,
         queueConfig,
         tasks,
-        logger: console
+        logger: testLogger
       });
       
       expect(result.success).to.be.true;
@@ -585,7 +586,7 @@ describe("Queue and Worker Functions", () => {
             type: "cleanup-test",
             inputData: { index: i }
           },
-          logger: console
+          logger: testLogger
         });
       }
       
@@ -623,7 +624,7 @@ describe("Queue and Worker Functions", () => {
             type: "multi-queue-test",
             inputData: { queue: 1 }
           },
-          logger: console
+          logger: testLogger
         });
         
         // Both queues should see the job

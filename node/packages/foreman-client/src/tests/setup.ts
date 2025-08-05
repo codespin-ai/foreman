@@ -1,4 +1,5 @@
 import { TestDatabase, TestServer, TestHttpClient } from '@codespin/foreman-test-utils';
+import { testLogger } from './test-logger.js';
 
 export const testDb = new TestDatabase({ dbName: 'foreman_client_test' });
 export const testServer = new TestServer({ port: 5003, dbName: 'foreman_client_test' });
@@ -15,15 +16,28 @@ export const getTestConfig = () => ({
 before(async function() {
   this.timeout(60000); // 60 seconds for setup
   
-  console.log('🚀 Starting Foreman client test setup...');
+  const isVerbose = process.env.VERBOSE_TESTS === 'true';
   
-  // Setup database
-  await testDb.setup();
+  // Temporarily override console.log for test utilities if not verbose
+  const originalLog = console.log;
+  if (!isVerbose) {
+    console.log = () => {};
+  }
   
-  // Start the real Foreman server
-  await testServer.start();
-  
-  console.log('✅ Foreman client test setup complete');
+  try {
+    testLogger.info('🚀 Starting Foreman client test setup...');
+    
+    // Setup database
+    await testDb.setup();
+    
+    // Start the real Foreman server
+    await testServer.start();
+    
+    testLogger.info('✅ Foreman client test setup complete');
+  } finally {
+    // Restore console.log
+    console.log = originalLog;
+  }
 });
 
 // Cleanup after each test
@@ -35,7 +49,7 @@ afterEach(async function() {
 after(async function() {
   this.timeout(30000); // 30 seconds for teardown
   
-  console.log('🛑 Shutting down Foreman client tests...');
+  testLogger.info('🛑 Shutting down Foreman client tests...');
   
   // Stop server
   await testServer.stop();
@@ -43,5 +57,5 @@ after(async function() {
   // Cleanup database
   await testDb.cleanup();
   
-  console.log('✅ Foreman client test teardown complete');
+  testLogger.info('✅ Foreman client test teardown complete');
 });

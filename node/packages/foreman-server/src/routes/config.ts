@@ -32,9 +32,10 @@ configRouter.get('/', (_req: Request, res: Response) => {
 
     // Only include non-sensitive configuration
     const config = {
+      version: process.env.FOREMAN_VERSION || '1.0.0',
+      environment: process.env.NODE_ENV || 'development',
       redis: redisConfig,
-      queues: queueConfig,
-      version: process.env.FOREMAN_VERSION || '1.0.0'
+      queues: queueConfig
     };
 
     logger.debug('Configuration requested', { 

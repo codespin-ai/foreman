@@ -57,11 +57,30 @@ app.use((req, res, next) => {
 });
 
 // Health check (no auth required)
-app.get('/health', (_req, res) => {
-  res.json({ 
-    status: 'healthy', 
+app.get('/health', async (_req, res) => {
+  const services: Record<string, string> = {};
+
+  // Check database connection
+  try {
+    const db = getDb();
+    await db.one('SELECT 1 as ok');
+    services.database = 'connected';
+  } catch {
+    services.database = 'disconnected';
+  }
+
+  // Check Redis connection (if configured)
+  if (process.env.REDIS_HOST) {
+    // Redis check would go here if we had a Redis client imported
+    // For now, we'll just indicate it's configured
+    services.redis = 'configured';
+  }
+
+  res.json({
+    status: 'healthy',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    services
   });
 });
 
@@ -84,7 +103,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
     res.status(400).json({ error: 'Invalid JSON in request body' });
     return;
   }
-  
+
   logger.error('Unhandled error', { error: err });
   res.status(500).json({ error: 'Internal server error' });
 });
@@ -96,7 +115,7 @@ async function start(): Promise<void> {
     const db = getDb();
     await db.one('SELECT 1 as ok');
     logger.info('Database connection established');
-    
+
     // Start listening
     app.listen(port, () => {
       logger.info('Server running', { port });

@@ -26,6 +26,7 @@ export {
   createTask,
   getTask,
   updateTask,
+  listTasks,
   getTaskStatus,
   waitForTask,
   

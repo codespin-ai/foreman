@@ -125,6 +125,22 @@ export async function updateTask(
 }
 
 /**
+ * List tasks with filtering
+ */
+export async function listTasks(
+  config: ForemanConfig,
+  params?: PaginationParams & { runId?: string; status?: string }
+): Promise<Result<PaginatedResult<Task>, Error>> {
+  const queryString = params ? buildQueryString(params) : '';
+  return httpRequest<PaginatedResult<Task>>({
+    method: 'GET',
+    url: `${config.endpoint}/api/v1/tasks${queryString}`,
+    headers: config.apiKey ? { 'Authorization': `Bearer ${config.apiKey}` } : undefined,
+    timeout: config.timeout
+  });
+}
+
+/**
  * Get task status
  */
 export async function getTaskStatus(params: {

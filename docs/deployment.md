@@ -154,10 +154,10 @@ Push your image to a container registry:
 
 ```bash
 # Push to GitHub Container Registry
-./scripts/docker-push.sh ghcr.io/yourorg/foreman latest
+./scripts/docker-push.sh latest ghcr.io/yourorg
 
 # Push to Docker Hub
-./scripts/docker-push.sh docker.io/yourorg/foreman latest
+./scripts/docker-push.sh latest docker.io/yourorg
 
 # Or manually
 docker tag foreman:latest ghcr.io/yourorg/foreman:latest

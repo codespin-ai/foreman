@@ -432,7 +432,7 @@ curl http://localhost:5002/health
 ./scripts/docker-test.sh
 
 # Push to registry
-./scripts/docker-push.sh ghcr.io/codespin-ai/foreman latest
+./scripts/docker-push.sh latest ghcr.io/codespin-ai
 ```
 
 ### Official Images

@@ -64,8 +64,8 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     sleep 2
 done
 
-# Run migrations if enabled
-if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
+# Run migrations if enabled (support both RUN_MIGRATIONS and FOREMAN_AUTO_MIGRATE)
+if [ "${RUN_MIGRATIONS:-false}" = "true" ] || [ "${FOREMAN_AUTO_MIGRATE:-false}" = "true" ]; then
     echo -e "${YELLOW}Running database migrations...${NC}"
     npm run migrate:foreman:latest
     
@@ -76,7 +76,7 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
         exit 1
     fi
 else
-    echo -e "${YELLOW}Skipping migrations (RUN_MIGRATIONS != true)${NC}"
+    echo -e "${YELLOW}Skipping migrations (FOREMAN_AUTO_MIGRATE != true)${NC}"
 fi
 
 # Execute the main command

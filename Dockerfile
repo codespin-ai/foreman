@@ -18,6 +18,9 @@ COPY node/packages/foreman-client/package*.json ./node/packages/foreman-client/
 # Copy build scripts
 COPY build.sh clean.sh ./
 
+# Copy TypeScript config
+COPY tsconfig.base.json ./
+
 # Copy source code
 COPY knexfile.js ./
 COPY node ./node
@@ -75,3 +78,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 
 # Use entrypoint for automatic setup
 ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["./start.sh"]

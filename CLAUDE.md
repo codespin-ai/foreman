@@ -11,15 +11,25 @@ When you begin working on this project, you MUST:
    - `/README.md` - Project overview and quick start
    - `/CODING-STANDARDS.md` - Mandatory coding patterns and conventions
    - `/docs/architecture.md` - System design and data flow
-   - `/docs/api-reference.md` - Complete REST API specification
+   - `/docs/api.md` - Complete REST API specification
    - `/docs/getting-started.md` - Tutorial and examples
    - Any other relevant docs based on the task at hand
 
 Only after reading these documents should you proceed with any implementation or analysis tasks.
 
+## Key Documentation References
+
+- **Project Overview**: See [README.md](../README.md)
+- **Architecture**: See [docs/architecture.md](docs/architecture.md) for system design and data flow
+- **API Documentation**: See [docs/api.md](docs/api.md) for complete API documentation including concepts, workflows, and endpoint reference
+- **Configuration**: See [docs/configuration.md](docs/configuration.md) for environment variables
+- **Deployment**: See [docs/deployment.md](docs/deployment.md) for Docker and production deployment
+- **Getting Started**: See [docs/getting-started.md](docs/getting-started.md) for tutorials
+- **TypeScript Client**: See [foreman-client README](node/packages/foreman-client/README.md)
+
 ## Overview
 
-Foreman is a workflow orchestration engine with REST API, built with TypeScript. It provides queue-agnostic task orchestration with PostgreSQL as the source of truth. The key principle is that queues only store task IDs, never data.
+This guide helps AI assistants work effectively with the Foreman codebase. For project overview, see [README.md](../README.md).
 
 ## Core Architecture Principles
 
@@ -100,36 +110,15 @@ npm run seed:foreman:run
 
 ### Recent Database Migrations
 
-1. **Initial Schema** (`20250803000000_initial_schema.js`)
-   - Core tables: `run`, `task`, `run_data`
-   - Basic indexes and constraints
-   - Initial unique constraint on `run_data(run_id, key)`
-
-2. **Add Tags to Run Data** (`20250803120000_add_tags_to_run_data.js`)
-   - Added `tags` column as `text[]` to `run_data` table
-   - Added GIN index for efficient tag queries
-
-3. **Add Updated At to Run and Task** (`20250804060438_add_updated_at_to_run.js`)
-   - Added `updated_at` column to both `run` and `task` tables
-   - Added PostgreSQL triggers to auto-update timestamps
-   - Ensures updatedAt is always current when status changes
-
-4. **Remove Unique Constraint on Run Data** (`20250804061803_remove_unique_constraint_on_run_data.js`)
-   - Dropped unique constraint on `run_data(run_id, key)`
-   - Allows multiple values per key for append-only patterns
-   - Enables event sourcing and audit trail use cases
+See `/database/foreman/migrations/` for migration history. Key changes:
+- Initial schema with core tables
+- Added tags to run_data with GIN index
+- Added updated_at columns with triggers
+- Removed unique constraint on run_data for multi-value support
 
 ## Package Structure
 
-Located in `/node/packages/`, build order matters:
-
-1. **@codespin/foreman-core** - Core types and Result utilities
-2. **@codespin/foreman-logger** - Centralized logging with pino
-3. **@codespin/foreman-db** - Database connection management
-4. **@codespin/foreman-test-utils** - Shared test utilities and infrastructure
-5. **@codespin/foreman-server** - REST API server
-6. **@codespin/foreman-client** - Client library for API access (published to npm)
-7. **@codespin/foreman-integration-tests** - Integration tests using REST API (separate from production build)
+See [README.md](../README.md#project-structure) for package details. Key point: When adding new packages, you MUST update the `PACKAGES` array in `./build.sh`.
 
 ## Development Workflow
 
@@ -141,21 +130,9 @@ Located in `/node/packages/`, build order matters:
 6. **Build**: Run `./build.sh` from root
 7. **Test**: Add integration tests in `foreman-integration-tests` and client tests in `foreman-client`
 
-## Environment Variables
+## Configuration
 
-Required PostgreSQL connection variables:
-- `FOREMAN_DB_HOST`
-- `FOREMAN_DB_PORT`
-- `FOREMAN_DB_NAME`
-- `FOREMAN_DB_USER`
-- `FOREMAN_DB_PASSWORD`
-- `FOREMAN_DB_SSL` (optional, default: false)
-
-Server configuration:
-- `PORT` (default: 3000)
-- `LOG_LEVEL` (default: info)
-- `NODE_ENV` (development/production)
-- `CORS_ORIGIN` (comma-separated list)
+See [Configuration Documentation](docs/configuration.md) for all environment variables and settings.
 
 ## Code Patterns
 
@@ -278,7 +255,7 @@ const task = await foreman.createTask({ /* ... */ });
 3. Implement domain function with Result type
 4. Add route with authentication and validation
 5. Add client method
-6. Document in `/docs/api-reference.md`
+6. Document in `/docs/api.md`
 
 ### Database Changes
 1. Create migration: `npm run migrate:foreman:make your_migration_name`
@@ -286,87 +263,9 @@ const task = await foreman.createTask({ /* ... */ });
 3. Run migration: `npm run migrate:foreman:latest` (only when asked)
 4. Update types and mappers accordingly
 
-## Testing & Quality
+## Testing
 
-### Two-Layer Testing Architecture
-
-Foreman implements a comprehensive testing strategy with two distinct test suites:
-
-#### 1. Integration Tests (`foreman-integration-tests`)
-- **Purpose**: Test the REST API directly using HTTP requests
-- **Database**: Uses `foreman_test` database
-- **Server**: Spawns real Foreman server on port 5099
-- **Coverage**: 49 tests covering all API endpoints
-- **Location**: `/node/packages/foreman-integration-tests`
-- **Key Features**:
-  - Direct HTTP testing of all endpoints
-  - Authentication middleware validation
-  - Error handling and edge cases
-  - Pagination and filtering tests
-  - Database constraint validation
-
-#### 2. Client Tests (`foreman-client`)
-- **Purpose**: Test the TypeScript client library
-- **Database**: Uses `foreman_client_test` database  
-- **Server**: Spawns real Foreman server on port 5003
-- **Coverage**: 18 tests covering all client functions
-- **Location**: `/node/packages/foreman-client/src/tests`
-- **Key Features**:
-  - Result type validation
-  - Error propagation testing
-  - Configuration handling
-  - API integration through client SDK
-
-### Test Utilities (`foreman-test-utils`)
-
-Shared test infrastructure package providing:
-- `TestServer`: Manages Foreman server lifecycle for tests
-- `TestDatabase`: Handles test database setup/teardown
-- `TestHttpClient`: Axios-based HTTP client for integration tests
-
-This package is used as a devDependency by both test suites, eliminating code duplication while keeping the client package clean for npm publishing.
-
-### Test Commands
-```bash
-# Integration tests
-npm run test:integration:foreman       # Run all integration tests
-npm run test:integration:foreman:watch  # Run integration tests in watch mode
-npm run test:grep -- "Pattern"         # Run specific integration test suite
-
-# Client tests
-npm run test:client                    # Run all client tests
-npm run test:client:watch              # Run client tests in watch mode
-npm run test:client:grep -- "Pattern"  # Run specific client test suite
-
-# All tests
-npm run test:integration:all           # Run all tests (integration + client)
-```
-
-### Test Database Management
-
-- Each test suite uses its own database to allow parallel execution
-- Databases are dropped and recreated with fresh migrations before each test run
-- Tables are truncated between individual tests for isolation
-- Migration state is properly tracked in the test databases
-
-### Running Tests
-
-#### Prerequisites
-```bash
-# Start PostgreSQL
-cd devenv
-./run.sh up
-```
-
-#### Test Execution
-```bash
-# Run all tests
-npm run test:integration:all
-
-# Run specific suite with grep
-npm run test:grep -- "Run Data API"
-npm run test:client:grep -- "should create run data"
-```
+See [README.md](../README.md#running-tests) for testing instructions.
 
 ### Testing Guidelines for Debugging and Fixes
 

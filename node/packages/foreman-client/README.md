@@ -111,7 +111,7 @@ type WorkerOptions = {
 
 ### Core Functions
 
-See the main Foreman README for complete API documentation.
+See the [API Documentation](../../docs/api-reference.md) for complete REST API reference.
 
 ## Examples
 

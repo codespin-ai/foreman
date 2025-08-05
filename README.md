@@ -12,6 +12,8 @@ A workflow orchestration engine with REST API, built with TypeScript. Foreman pr
 - 🔄 **Run Data Storage** - Key-value storage with tags and multi-value support for inter-task communication
 - 🚀 **REST API** - Simple HTTP API for all operations
 - 📊 **Status Tracking** - Complete execution history and status tracking
+- 🐳 **Docker Support** - Official Docker images available
+- 📦 **TypeScript Client** - Published npm package for easy integration
 
 ## Architecture
 
@@ -23,14 +25,64 @@ Foreman follows a clean architecture where:
 
 ## Quick Start
 
-### Prerequisites
+### Option 1: Docker (Recommended)
 
+The fastest way to get started with Foreman is using Docker:
+
+```bash
+# Using Docker Compose (includes PostgreSQL)
+git clone https://github.com/codespin-ai/foreman.git
+cd foreman
+docker-compose up
+
+# The API will be available at http://localhost:5002
+# Note: Add Redis service to docker-compose.yml if using BullMQ
+```
+
+Or use the official Docker image:
+
+```bash
+docker run -p 5002:5002 \
+  -e FOREMAN_DB_HOST=your-db-host \
+  -e FOREMAN_DB_NAME=foreman \
+  -e FOREMAN_DB_USER=postgres \
+  -e FOREMAN_DB_PASSWORD=your-password \
+  -e REDIS_HOST=your-redis-host \
+  -e REDIS_PORT=6379 \
+  -e FOREMAN_AUTO_MIGRATE=true \
+  ghcr.io/codespin-ai/foreman:latest
+```
+
+See [deployment documentation](docs/deployment.md) for production Docker configuration.
+
+### Option 2: TypeScript Client SDK
+
+For existing applications, install the TypeScript client:
+
+```bash
+npm install @codespin/foreman-client
+```
+
+```typescript
+import { initializeForemanClient } from '@codespin/foreman-client';
+
+const client = await initializeForemanClient({
+  endpoint: 'https://your-foreman-server.com',
+  apiKey: 'fmn_prod_myorg_abc123'
+});
+```
+
+See the [foreman-client README](node/packages/foreman-client/README.md) for detailed client documentation.
+
+### Option 3: Local Development
+
+#### Prerequisites
 - Node.js 22+
 - PostgreSQL 12+
 - Redis (if using BullMQ)
 - npm or yarn
 
-### Installation
+#### Installation
 
 ```bash
 # Clone the repository
@@ -44,7 +96,7 @@ npm install
 ./build.sh
 ```
 
-### Database Setup
+#### Database Setup
 
 ```bash
 # Set environment variables
@@ -110,38 +162,13 @@ For testing:
 
 ### Health Check
 
-- `GET /api/v1/health` - Health check endpoint (no authentication required)
+- `GET /health` - Health check endpoint (no authentication required)
 
-### Runs
+See the [API documentation](docs/api.md) for complete endpoint reference and examples.
 
-- `POST /api/v1/runs` - Create a new run
-- `GET /api/v1/runs/:id` - Get run details
-- `PATCH /api/v1/runs/:id` - Update run status
-- `GET /api/v1/runs` - List runs with pagination and filtering
+## TypeScript Client SDK
 
-### Tasks
-
-- `POST /api/v1/tasks` - Create a new task
-- `GET /api/v1/tasks/:id` - Get task details
-- `PATCH /api/v1/tasks/:id` - Update task status
-- `GET /api/v1/tasks` - List tasks with pagination and filtering
-
-### Run Data
-
-- `POST /api/v1/runs/:runId/data` - Store data with optional tags
-- `GET /api/v1/runs/:runId/data` - Query data with flexible filtering (by key, tags, prefix)
-- `PATCH /api/v1/runs/:runId/data/:dataId/tags` - Update tags on existing data
-- `DELETE /api/v1/runs/:runId/data` - Delete data by key or ID
-
-### Configuration
-
-- `GET /api/v1/config` - Get client configuration (Redis, queues, version)
-- `GET /api/v1/config/redis` - Get Redis configuration only
-- `GET /api/v1/config/queues` - Get queue names configuration only
-
-## Client Usage
-
-The foreman-client package provides a complete workflow SDK that handles all queue operations internally:
+The `@codespin/foreman-client` package provides a complete workflow SDK that handles all queue operations internally:
 
 ```typescript
 import { 
@@ -179,24 +206,73 @@ const task = await enqueueFn({
   priority: 10
 });
 
-// Create a worker
+// Create a worker with multiple task handlers
 const worker = await createWorkerFn({
-  'process-order': async (task) => {
-    // Store intermediate data
+  'validate-order': async (task) => {
+    console.log('Validating order:', task.inputData);
+    
+    // Perform validation
+    const isValid = validateOrder(task.inputData.orderId);
+    
+    // Store result using run data
     await createRunData(foremanConfig, task.runId, {
       taskId: task.id,
-      key: 'order-status',
-      value: { status: 'processing' },
-      tags: ['order-456', 'status']
+      key: 'order-validation',
+      value: { valid: isValid, timestamp: Date.now() },
+      tags: ['validation', 'order']
     });
     
-    // Process order...
-    return { processed: true };
+    return { valid: isValid };
+  },
+  
+  'process-payment': async (task) => {
+    console.log('Processing payment:', task.inputData);
+    
+    // Query previous validation result
+    const validationData = await queryRunData(foremanConfig, task.runId, {
+      key: 'order-validation'
+    });
+    
+    if (!validationData.success || !validationData.data.data[0]?.value.valid) {
+      throw new Error('Order validation failed');
+    }
+    
+    // Process payment
+    const result = await processPayment(task.inputData);
+    return result;
   }
-}, { concurrency: 5 });
+}, { 
+  concurrency: 5,
+  maxRetries: 3
+});
 
 await worker.start();
+
+// Query run data
+const results = await queryRunData(foremanConfig, run.data.id, {
+  tags: ['validation'],
+  sortBy: 'created_at',
+  sortOrder: 'desc'
+});
+
+// Complete the run
+await updateRun(foremanConfig, run.data.id, {
+  status: 'completed',
+  outputData: {
+    processedAt: new Date().toISOString(),
+    totalAmount: 99.99
+  }
+});
 ```
+
+## Best Practices
+
+1. **Store Task IDs Only**: Keep queue payloads minimal by storing only task IDs
+2. **Use Run Data**: Share data between tasks using the run data key-value store
+3. **Handle Retries**: Configure `maxRetries` when creating tasks
+4. **Update Status**: Always update task status during processing
+5. **Error Handling**: Store detailed error information for debugging
+6. **Metadata**: Use metadata for filtering and additional context
 
 ## Client API Reference
 
@@ -333,6 +409,37 @@ deleteRunData(
   options: { key?: string; id?: string }
 ): Promise<Result<{ deleted: number }, Error>>
 ```
+
+## Docker Support
+
+### Quick Start with Docker Compose
+
+```bash
+# Start Foreman with PostgreSQL and Redis
+docker-compose up
+
+# Access the API at http://localhost:5002
+curl http://localhost:5002/health
+```
+
+### Building Docker Images
+
+```bash
+# Build the Docker image
+./scripts/docker-build.sh
+
+# Test the image locally
+./scripts/docker-test.sh
+
+# Push to registry
+./scripts/docker-push.sh ghcr.io/codespin-ai/foreman latest
+```
+
+### Official Images
+
+Official Docker images are available at `ghcr.io/codespin-ai/foreman`.
+
+See [deployment documentation](docs/deployment.md) for production Docker deployment.
 
 ## Development
 

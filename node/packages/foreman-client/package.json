@@ -14,7 +14,7 @@
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "test": "mocha --exit",
-    "test:watch": "mocha --watch"
+    "test:grep": "mocha --exit --grep"
   },
   "dependencies": {
     "bullmq": "^5.34.3"

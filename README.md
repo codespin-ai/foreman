@@ -480,6 +480,9 @@ cd devenv
 #### Test Commands
 
 ```bash
+# Run full integration test suite (recommended)
+npm test
+
 # Run all tests (integration + client)
 npm run test:integration:all
 
@@ -490,12 +493,8 @@ npm run test:integration:foreman
 npm run test:client
 
 # Run specific test suite
-npm run test:grep -- "Organizations"
+npm run test:integration:grep -- "Organizations"
 npm run test:client:grep -- "Run Management"
-
-# Run with watch mode
-npm run test:integration:foreman:watch
-npm run test:client:watch
 
 # Run tests with verbose logging
 VERBOSE_TESTS=true npm run test:integration:all

@@ -272,24 +272,27 @@ const task = await foreman.createTask({ /* ... */ });
 ### Running Tests
 
 ```bash
+# Run full integration test suite (recommended)
+npm test
+
 # Run all integration tests (from root)
 npm run test:integration:all
 
-# Run specific test files
-npm run test:integration -- path/to/test.js
+# Run specific test suites
+npm run test:integration:grep -- "test name"
 
-# Run tests for a specific package
-cd node/packages/foreman-client && npm test
+# Run client-specific tests
+npm run test:client:grep -- "test name"
 ```
 
 ### Testing Guidelines for Debugging and Fixes
 
 **IMPORTANT**: When fixing bugs or debugging issues:
 1. **Always run individual tests** when fixing specific issues
-2. Use `npm run test:grep -- "test name"` to run specific test suites
+2. Use `npm run test:integration:grep -- "test name"` to run specific integration test suites
 3. Use `npm run test:client:grep -- "test name"` for client-specific tests
 4. Test incrementally - run the specific failing test after each change
-5. Only run the full test suite after individual tests pass
+5. Run `npm test` for the full test suite after individual tests pass
 
 This approach:
 - Provides faster feedback loops

@@ -18,6 +18,7 @@ A workflow orchestration engine with REST API, built with TypeScript. Foreman pr
 ## Architecture
 
 Foreman follows a clean architecture where:
+
 - **Queue systems** (BullMQ, SQS, etc.) only store task IDs
 - **PostgreSQL** stores all task data, run state, and execution history
 - **foreman-client** handles queue operations in your application
@@ -64,11 +65,11 @@ npm install @codespin/foreman-client
 ```
 
 ```typescript
-import { initializeForemanClient } from '@codespin/foreman-client';
+import { initializeForemanClient } from "@codespin/foreman-client";
 
 const client = await initializeForemanClient({
-  endpoint: 'https://your-foreman-server.com',
-  apiKey: 'fmn_prod_myorg_abc123'
+  endpoint: "https://your-foreman-server.com",
+  apiKey: "fmn_prod_myorg_abc123",
 });
 ```
 
@@ -77,6 +78,7 @@ See the [foreman-client README](node/packages/foreman-client/README.md) for deta
 ### Option 3: Local Development
 
 #### Prerequisites
+
 - Node.js 22+
 - PostgreSQL 12+
 - Redis (if using BullMQ)
@@ -140,6 +142,7 @@ The REST API will be available at `http://localhost:3000`.
 All API endpoints (except health check) require authentication. You can use either:
 
 1. **Bearer token** in Authorization header:
+
    ```
    Authorization: Bearer fmn_prod_org123_randomstring
    ```
@@ -152,11 +155,13 @@ All API endpoints (except health check) require authentication. You can use eith
 The API key format is: `fmn_[environment]_[organizationId]_[random]`
 
 Since Foreman runs in a fully trusted environment, the authentication is simplified:
+
 - No permission checks - all authenticated users have full access
 - No database validation - API key format is validated only
 - Organization ID is extracted from the API key
 
 For testing:
+
 - Set `FOREMAN_API_KEY` environment variable to use a specific test key
 - Authentication can be disabled by not setting `FOREMAN_API_KEY_ENABLED` or `FOREMAN_API_KEY`
 
@@ -171,23 +176,24 @@ See the [API documentation](docs/api.md) for complete endpoint reference and exa
 The `@codespin/foreman-client` package provides a complete workflow SDK that handles all queue operations internally:
 
 ```typescript
-import { 
-  initializeForemanClient, 
-  createRun, 
+import {
+  initializeForemanClient,
+  createRun,
   enqueueTask,
   createWorker,
   createRunData,
-  queryRunData
-} from '@codespin/foreman-client';
+  queryRunData,
+} from "@codespin/foreman-client";
 
 // Initialize client (fetches Redis config automatically)
 const foremanConfig = {
-  endpoint: 'http://localhost:3000',
-  apiKey: 'fmn_prod_myorg_abc123',  // Format: fmn_[env]_[orgId]_[random]
-  queues: {  // Optional: override default queue names
-    taskQueue: 'my-app:tasks',
-    resultQueue: 'my-app:results'
-  }
+  endpoint: "http://localhost:3000",
+  apiKey: "fmn_prod_myorg_abc123", // Format: fmn_[env]_[orgId]_[random]
+  queues: {
+    // Optional: override default queue names
+    taskQueue: "my-app:tasks",
+    resultQueue: "my-app:results",
+  },
 };
 
 const client = await initializeForemanClient(foremanConfig);
@@ -195,73 +201,79 @@ const { enqueueTask: enqueueFn, createWorker: createWorkerFn } = client;
 
 // Create a run
 const run = await createRun(foremanConfig, {
-  inputData: { workflowType: 'order-processing' }
+  inputData: { workflowType: "order-processing" },
 });
 
 // Enqueue tasks (handles both DB and BullMQ)
 const task = await enqueueFn({
-  type: 'process-order',
+  type: "process-order",
   runId: run.data.id,
-  inputData: { orderId: 'order-456' },
-  priority: 10
+  inputData: { orderId: "order-456" },
+  priority: 10,
 });
 
 // Create a worker with multiple task handlers
-const worker = await createWorkerFn({
-  'validate-order': async (task) => {
-    console.log('Validating order:', task.inputData);
-    
-    // Perform validation
-    const isValid = validateOrder(task.inputData.orderId);
-    
-    // Store result using run data
-    await createRunData(foremanConfig, task.runId, {
-      taskId: task.id,
-      key: 'order-validation',
-      value: { valid: isValid, timestamp: Date.now() },
-      tags: ['validation', 'order']
-    });
-    
-    return { valid: isValid };
+const worker = await createWorkerFn(
+  {
+    "validate-order": async (task) => {
+      console.log("Validating order:", task.inputData);
+
+      // Perform validation
+      const isValid = validateOrder(task.inputData.orderId);
+
+      // Store result using run data
+      await createRunData(foremanConfig, task.runId, {
+        taskId: task.id,
+        key: "order-validation",
+        value: { valid: isValid, timestamp: Date.now() },
+        tags: ["validation", "order"],
+      });
+
+      return { valid: isValid };
+    },
+
+    "process-payment": async (task) => {
+      console.log("Processing payment:", task.inputData);
+
+      // Query previous validation result
+      const validationData = await queryRunData(foremanConfig, task.runId, {
+        key: "order-validation",
+      });
+
+      if (
+        !validationData.success ||
+        !validationData.data.data[0]?.value.valid
+      ) {
+        throw new Error("Order validation failed");
+      }
+
+      // Process payment
+      const result = await processPayment(task.inputData);
+      return result;
+    },
   },
-  
-  'process-payment': async (task) => {
-    console.log('Processing payment:', task.inputData);
-    
-    // Query previous validation result
-    const validationData = await queryRunData(foremanConfig, task.runId, {
-      key: 'order-validation'
-    });
-    
-    if (!validationData.success || !validationData.data.data[0]?.value.valid) {
-      throw new Error('Order validation failed');
-    }
-    
-    // Process payment
-    const result = await processPayment(task.inputData);
-    return result;
-  }
-}, { 
-  concurrency: 5,
-  maxRetries: 3
-});
+  {
+    concurrency: 5,
+    maxRetries: 3,
+  },
+);
 
 await worker.start();
 
 // Query run data
 const results = await queryRunData(foremanConfig, run.data.id, {
-  tags: ['validation'],
-  sortBy: 'created_at',
-  sortOrder: 'desc'
+  tags: ["validation"],
+  sortBy: "created_at",
+  sortOrder: "desc",
 });
 
 // Complete the run
 await updateRun(foremanConfig, run.data.id, {
-  status: 'completed',
+  status: "completed",
   outputData: {
     processedAt: new Date().toISOString(),
-    totalAmount: 99.99
-  }
+    totalAmount: 99.99,
+  },
 });
 ```
 
@@ -287,7 +299,7 @@ type ForemanConfig = {
     taskQueue?: string;
     resultQueue?: string;
   };
-}
+};
 ```
 
 ### Configuration Functions
@@ -305,7 +317,7 @@ initializeForemanClient(config: ForemanConfig): Promise<{
 // Get Redis configuration
 getRedisConfig(config: ForemanConfig): Promise<Result<RedisConfig, Error>>
 
-// Get queue configuration  
+// Get queue configuration
 getQueueConfig(config: ForemanConfig): Promise<Result<QueueConfig, Error>>
 ```
 
@@ -517,6 +529,7 @@ Foreman uses a two-layer testing architecture:
    - 18 tests covering all client functions
 
 Both test suites:
+
 - Use separate test databases (`foreman_test`, `foreman_client_test`)
 - Run fresh migrations before each test suite
 - Truncate tables between tests for isolation

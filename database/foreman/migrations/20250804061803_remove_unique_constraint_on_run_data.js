@@ -8,17 +8,17 @@ export const up = async (knex) => {
       AND constraint_type = 'UNIQUE' 
       AND constraint_name LIKE '%run_id%key%'
   `);
-  
+
   if (constraintExists.rows.length > 0) {
-    await knex.schema.alterTable('run_data', (table) => {
-      table.dropUnique(['run_id', 'key']);
+    await knex.schema.alterTable("run_data", (table) => {
+      table.dropUnique(["run_id", "key"]);
     });
   }
 };
 
 export const down = async (knex) => {
   // Re-add the unique constraint
-  await knex.schema.alterTable('run_data', (table) => {
-    table.unique(['run_id', 'key']);
+  await knex.schema.alterTable("run_data", (table) => {
+    table.unique(["run_id", "key"]);
   });
 };

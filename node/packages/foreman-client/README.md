@@ -20,27 +20,27 @@ npm install @codespin/foreman-client
 ## Quick Start
 
 ```typescript
-import { 
-  initializeForemanClient, 
+import {
+  initializeForemanClient,
   createRun,
   createRunData,
-  queryRunData
-} from '@codespin/foreman-client';
+  queryRunData,
+} from "@codespin/foreman-client";
 
 // Initialize client with default queue names from server
 const config = {
-  endpoint: 'http://localhost:3000',
-  apiKey: 'your-api-key'
+  endpoint: "http://localhost:3000",
+  apiKey: "your-api-key",
 };
 
 // Or override queue names
 const configWithQueues = {
-  endpoint: 'http://localhost:3000',
-  apiKey: 'your-api-key',
+  endpoint: "http://localhost:3000",
+  apiKey: "your-api-key",
   queues: {
-    taskQueue: 'my-custom-tasks',
-    resultQueue: 'my-custom-results'
-  }
+    taskQueue: "my-custom-tasks",
+    resultQueue: "my-custom-results",
+  },
 };
 
 const client = await initializeForemanClient(config);
@@ -48,22 +48,22 @@ const { enqueueTask, createWorker } = client;
 
 // Create a run
 const run = await createRun(config, {
-  inputData: { type: 'data-processing' }
+  inputData: { type: "data-processing" },
 });
 
 // Enqueue a task
 const task = await enqueueTask({
   runId: run.data.id,
-  type: 'process',
-  inputData: { dataId: '123' }
+  type: "process",
+  inputData: { dataId: "123" },
 });
 
 // Create a worker
 const worker = await createWorker({
-  'process': async (task) => {
-    console.log('Processing:', task.inputData);
+  process: async (task) => {
+    console.log("Processing:", task.inputData);
     return { success: true };
-  }
+  },
 });
 
 await worker.start();
@@ -124,52 +124,55 @@ const { enqueueTask, createWorker } = client;
 
 // Create a processing pipeline
 const run = await createRun(config, {
-  inputData: { pipeline: 'etl' }
+  inputData: { pipeline: "etl" },
 });
 
 // Enqueue tasks with dependencies
 const extractTask = await enqueueTask({
   runId: run.data.id,
-  type: 'extract',
-  inputData: { source: 'database' }
+  type: "extract",
+  inputData: { source: "database" },
 });
 
 const transformTask = await enqueueTask({
   runId: run.data.id,
-  type: 'transform',
+  type: "transform",
   inputData: { dependsOn: extractTask.taskId },
-  delay: 5000 // Wait 5 seconds
+  delay: 5000, // Wait 5 seconds
 });
 
 // Create workers for each task type
-const worker = await createWorker({
-  'extract': async (task) => {
-    const data = await fetchData(task.inputData.source);
-    await createRunData(config, task.runId, {
-      taskId: task.id,
-      key: 'raw-data',
-      value: data,
-      tags: ['extracted', 'raw']
-    });
-    return { recordCount: data.length };
+const worker = await createWorker(
+  {
+    extract: async (task) => {
+      const data = await fetchData(task.inputData.source);
+      await createRunData(config, task.runId, {
+        taskId: task.id,
+        key: "raw-data",
+        value: data,
+        tags: ["extracted", "raw"],
+      });
+      return { recordCount: data.length };
+    },
+
+    transform: async (task) => {
+      // Query previous results
+      const rawData = await queryRunData(config, task.runId, {
+        key: "raw-data",
+      });
+
+      const transformed = transformData(rawData.data[0].value);
+      await createRunData(config, task.runId, {
+        taskId: task.id,
+        key: "transformed-data",
+        value: transformed,
+        tags: ["transformed", "processed"],
+      });
+      return { success: true };
+    },
   },
-  
-  'transform': async (task) => {
-    // Query previous results
-    const rawData = await queryRunData(config, task.runId, {
-      key: 'raw-data'
-    });
-    
-    const transformed = transformData(rawData.data[0].value);
-    await createRunData(config, task.runId, {
-      taskId: task.id,
-      key: 'transformed-data',
-      value: transformed,
-      tags: ['transformed', 'processed']
-    });
-    return { success: true };
-  }
-}, { concurrency: 10 });
+  { concurrency: 10 },
+);
 
 await worker.start();
 ```
@@ -177,30 +180,33 @@ await worker.start();
 ### Error Handling
 
 ```typescript
-const worker = await createWorker({
-  'risky-operation': async (task) => {
-    try {
-      const result = await riskyOperation(task.inputData);
-      return { success: true, result };
-    } catch (error) {
-      // Log error details
-      await createRunData(config, task.runId, {
-        taskId: task.id,
-        key: `error-${Date.now()}`,
-        value: { 
-          error: error.message, 
-          stack: error.stack,
-          input: task.inputData 
-        },
-        tags: ['error', task.type]
-      });
-      throw error; // Re-throw for retry logic
-    }
-  }
-}, {
-  maxRetries: 3,
-  backoffDelay: 2000
-});
+const worker = await createWorker(
+  {
+    "risky-operation": async (task) => {
+      try {
+        const result = await riskyOperation(task.inputData);
+        return { success: true, result };
+      } catch (error) {
+        // Log error details
+        await createRunData(config, task.runId, {
+          taskId: task.id,
+          key: `error-${Date.now()}`,
+          value: {
+            error: error.message,
+            stack: error.stack,
+            input: task.inputData,
+          },
+          tags: ["error", task.type],
+        });
+        throw error; // Re-throw for retry logic
+      }
+    },
+  },
+  {
+    maxRetries: 3,
+    backoffDelay: 2000,
+  },
+);
 ```
 
 ## Best Practices
@@ -219,16 +225,17 @@ By default, the client fetches queue names from the Foreman server. You can over
 
 ```typescript
 const config = {
-  endpoint: 'http://localhost:3000',
-  apiKey: 'your-api-key',
+  endpoint: "http://localhost:3000",
+  apiKey: "your-api-key",
   queues: {
-    taskQueue: 'my-app:tasks',      // Default: from server config
-    resultQueue: 'my-app:results'   // Default: from server config
-  }
+    taskQueue: "my-app:tasks", // Default: from server config
+    resultQueue: "my-app:results", // Default: from server config
+  },
 };
 ```
 
 This is useful when:
+
 - Running multiple applications with separate queues
 - Testing with isolated queue names
 - Implementing queue-based routing or priority systems

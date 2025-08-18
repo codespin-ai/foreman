@@ -74,7 +74,7 @@ docker-compose down
 Create a `docker-compose.prod.yml`:
 
 ```yaml
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
@@ -121,7 +121,8 @@ services:
       - foreman_network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/v1/health"]
+      test:
+        ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -184,37 +185,37 @@ spec:
         app: foreman
     spec:
       containers:
-      - name: foreman
-        image: ghcr.io/codespin-ai/foreman:latest
-        ports:
-        - containerPort: 3000
-        env:
-        - name: FOREMAN_DB_HOST
-          value: postgres-service
-        - name: FOREMAN_DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: foreman-secrets
-              key: db-password
-        - name: REDIS_HOST
-          value: redis-service
-        - name: REDIS_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: foreman-secrets
-              key: redis-password
-        livenessProbe:
-          httpGet:
-            path: /api/v1/health
-            port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /api/v1/health
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 5
+        - name: foreman
+          image: ghcr.io/codespin-ai/foreman:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: FOREMAN_DB_HOST
+              value: postgres-service
+            - name: FOREMAN_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: foreman-secrets
+                  key: db-password
+            - name: REDIS_HOST
+              value: redis-service
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: foreman-secrets
+                  key: redis-password
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
 ---
 apiVersion: v1
 kind: Service
@@ -224,8 +225,8 @@ spec:
   selector:
     app: foreman
   ports:
-  - port: 3000
-    targetPort: 3000
+    - port: 3000
+      targetPort: 3000
   type: LoadBalancer
 ```
 
@@ -278,6 +279,7 @@ env:
 ### Setup Steps
 
 1. Clone and build:
+
 ```bash
 git clone https://github.com/codespin-ai/foreman.git
 cd foreman
@@ -286,6 +288,7 @@ npm install
 ```
 
 2. Configure environment:
+
 ```bash
 # Create production env file
 cat > .env.production << EOF
@@ -304,27 +307,29 @@ EOF
 ```
 
 3. Run migrations:
+
 ```bash
 source .env.production
 npm run migrate:foreman:latest
 ```
 
 4. Start with PM2:
+
 ```bash
 # Create PM2 ecosystem file
 cat > ecosystem.config.js << EOF
 module.exports = {
   apps: [{
-    name: 'foreman',
-    script: './start.sh',
+    name: "foreman",
+    script: "./start.sh",
     env_production: {
-      NODE_ENV: 'production'
+      NODE_ENV: "production"
     },
-    instances: 'max',
-    exec_mode: 'cluster',
+    instances: "max",
+    exec_mode: "cluster",
     autorestart: true,
     watch: false,
-    max_memory_restart: '1G'
+    max_memory_restart: "1G"
   }]
 }
 EOF
@@ -353,7 +358,7 @@ server {
         proxy_pass http://foreman_backend;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -374,6 +379,7 @@ curl http://localhost:3000/api/v1/health
 ```
 
 Response:
+
 ```json
 {
   "status": "ok",
@@ -412,10 +418,10 @@ Example Prometheus configuration:
 
 ```yaml
 scrape_configs:
-  - job_name: 'foreman'
+  - job_name: "foreman"
     static_configs:
-      - targets: ['localhost:3000']
-    metrics_path: '/metrics'
+      - targets: ["localhost:3000"]
+    metrics_path: "/metrics"
 ```
 
 ## Security Considerations

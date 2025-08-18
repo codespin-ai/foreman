@@ -22,14 +22,18 @@ export function failure<E = Error>(error: E): Result<never, E> {
 /**
  * Check if a result is successful
  */
-export function isSuccess<T, E>(result: Result<T, E>): result is { success: true; data: T } {
+export function isSuccess<T, E>(
+  result: Result<T, E>,
+): result is { success: true; data: T } {
   return result.success;
 }
 
 /**
  * Check if a result is a failure
  */
-export function isFailure<T, E>(result: Result<T, E>): result is { success: false; error: E } {
+export function isFailure<T, E>(
+  result: Result<T, E>,
+): result is { success: false; error: E } {
   return !result.success;
 }
 
@@ -38,7 +42,7 @@ export function isFailure<T, E>(result: Result<T, E>): result is { success: fals
  */
 export function mapResult<T, U, E>(
   result: Result<T, E>,
-  fn: (data: T) => U
+  fn: (data: T) => U,
 ): Result<U, E> {
   if (result.success) {
     return success(fn(result.data));
@@ -51,7 +55,7 @@ export function mapResult<T, U, E>(
  */
 export function mapError<T, E, F>(
   result: Result<T, E>,
-  fn: (error: E) => F
+  fn: (error: E) => F,
 ): Result<T, F> {
   if (!result.success) {
     return failure(fn(result.error));
@@ -64,7 +68,7 @@ export function mapError<T, E, F>(
  */
 export async function chainResult<T, U, E>(
   result: Result<T, E>,
-  fn: (data: T) => Promise<Result<U, E>>
+  fn: (data: T) => Promise<Result<U, E>>,
 ): Promise<Result<U, E>> {
   if (result.success) {
     return fn(result.data);

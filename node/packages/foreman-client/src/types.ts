@@ -52,4 +52,3 @@ export type WorkerControls = {
   pause: () => Promise<void>;
   resume: () => Promise<void>;
 };
-

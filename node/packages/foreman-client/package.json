@@ -1,6 +1,6 @@
 {
   "name": "@codespin/foreman-client",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Client library for Foreman API",
   "type": "module",
   "main": "./dist/index.js",

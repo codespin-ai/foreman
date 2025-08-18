@@ -4,7 +4,16 @@
 # -------------------------------------------------------------------
 set -euo pipefail
 
-echo "Running linting across all packages..."
+# Check for --fix flag
+FIX_FLAG=""
+LINT_COMMAND="lint"
+if [[ "${1:-}" == "--fix" ]]; then
+  FIX_FLAG="--fix"
+  LINT_COMMAND="lint:fix"
+  echo "Running linting with auto-fix across all packages..."
+else
+  echo "Running linting across all packages..."
+fi
 
 # Define packages
 PACKAGES=(
@@ -30,11 +39,32 @@ for pkg_name in "${PACKAGES[@]}"; do
   if node -e "process.exit(require('./$pkg/package.json').scripts?.lint ? 0 : 1)"; then
     echo ""
     echo "Linting @codespin/$pkg_name..."
-    if (cd "$pkg" && npm run lint); then
-      echo "✓ @codespin/$pkg_name lint passed"
+    # Try lint:fix first if --fix flag is set, otherwise use lint
+    if [[ -n "$FIX_FLAG" ]]; then
+      # Check if lint:fix script exists
+      if node -e "process.exit(require('./$pkg/package.json').scripts?.['lint:fix'] ? 0 : 1)"; then
+        if (cd "$pkg" && npm run lint:fix); then
+          echo "✓ @codespin/$pkg_name lint fixed"
+        else
+          echo "✗ @codespin/$pkg_name lint:fix failed"
+          all_passed=false
+        fi
+      else
+        # Fall back to lint with --fix flag
+        if (cd "$pkg" && npm run lint -- --fix); then
+          echo "✓ @codespin/$pkg_name lint fixed"
+        else
+          echo "✗ @codespin/$pkg_name lint --fix failed"
+          all_passed=false
+        fi
+      fi
     else
-      echo "✗ @codespin/$pkg_name lint failed"
-      all_passed=false
+      if (cd "$pkg" && npm run lint); then
+        echo "✓ @codespin/$pkg_name lint passed"
+      else
+        echo "✗ @codespin/$pkg_name lint failed"
+        all_passed=false
+      fi
     fi
   fi
 done
@@ -42,9 +72,17 @@ done
 echo ""
 echo "================================"
 if [ "$all_passed" = true ]; then
-  echo "✓ All packages passed linting!"
+  if [[ -n "$FIX_FLAG" ]]; then
+    echo "✓ All packages fixed successfully!"
+  else
+    echo "✓ All packages passed linting!"
+  fi
   exit 0
 else
-  echo "✗ Some packages failed linting"
+  if [[ -n "$FIX_FLAG" ]]; then
+    echo "✗ Some packages failed to fix"
+  else
+    echo "✗ Some packages failed linting"
+  fi
   exit 1
 fi

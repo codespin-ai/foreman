@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@codespin/foreman-core": "file:../foreman-core",
-    "@codespin/foreman-logger": "file:../foreman-logger", 
+    "@codespin/foreman-logger": "file:../foreman-logger",
     "@codespin/foreman-db": "file:../foreman-db",
     "@codespin/foreman-server": "file:../foreman-server",
     "express": "^4.21.2",

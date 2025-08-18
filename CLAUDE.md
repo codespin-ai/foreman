@@ -34,18 +34,21 @@ This guide helps AI assistants work effectively with the Foreman codebase. For p
 ## Core Architecture Principles
 
 ### 1. ID-Only Queue Pattern
+
 - **NEVER** store task data in queues (BullMQ, SQS, etc.)
 - **ALWAYS** store all task data in PostgreSQL
 - Queues contain only task IDs
 - Workers fetch full data from Foreman before processing
 
 ### 2. Functional Programming Only
+
 - **NO CLASSES** - Export functions from modules only
 - Use pure functions with explicit dependency injection
 - Prefer `type` over `interface` (use `interface` only for extensible contracts)
 - Use Result types for error handling instead of exceptions
 
 ### 3. Database Conventions
+
 - **PostgreSQL** with **Knex.js** for migrations
 - **pg-promise** for data access (NO ORMs)
 - Table names: **singular** and **snake_case** (e.g., `run`, `task`, `run_data`)
@@ -56,6 +59,7 @@ This guide helps AI assistants work effectively with the Foreman codebase. For p
 - **Type-safe Queries**: All queries use `db.one<XxxDbRow>()` with explicit type parameters
 
 ### 4. REST API Design
+
 - RESTful endpoints (no GraphQL)
 - JSON request/response bodies
 - Standard HTTP status codes
@@ -63,13 +67,15 @@ This guide helps AI assistants work effectively with the Foreman codebase. For p
 - Consistent error response format
 
 ### 5. ESM Modules
-- All imports MUST include `.js` extension: `import { foo } from './bar.js'`
+
+- All imports MUST include `.js` extension: `import { foo } from "./bar.js"`
 - TypeScript configured for `"module": "NodeNext"`
 - Type: `"module"` in all package.json files
 
 ## Essential Commands
 
 ### Build Commands
+
 ```bash
 # Build entire project (from root)
 ./build.sh              # Standard build
@@ -84,6 +90,11 @@ This guide helps AI assistants work effectively with the Foreman codebase. For p
 
 # Lint entire project (from root)
 ./lint-all.sh           # Run ESLint on all packages
+./lint-all.sh --fix     # Run ESLint with auto-fix
+
+# Format code with Prettier (MUST run before committing)
+./format-all.sh         # Format all files
+./format-all.sh --check # Check formatting without changing files
 ```
 
 ### Database Commands
@@ -111,6 +122,7 @@ npm run seed:foreman:run
 ### Recent Database Migrations
 
 See `/database/foreman/migrations/` for migration history. Key changes:
+
 - Initial schema with core tables
 - Added tags to run_data with GIN index
 - Added updated_at columns with triggers
@@ -132,7 +144,11 @@ See [README.md](../README.md#project-structure) for package details. Key point: 
 
 ## Git Workflow
 
-**IMPORTANT**: NEVER commit and push changes without explicit user permission. When the user asks you to commit and push, follow the git commit guidelines in the main Claude system prompt.
+**IMPORTANT**: NEVER commit and push changes without explicit user permission. When the user asks you to commit and push:
+
+1. Run `./format-all.sh` to format all files with Prettier
+2. Run `./lint-all.sh` to ensure code passes linting
+3. Follow the git commit guidelines in the main Claude system prompt
 
 ## Configuration
 
@@ -141,18 +157,19 @@ See [Configuration Documentation](docs/configuration.md) for all environment var
 ## Code Patterns
 
 ### Domain Function Pattern
+
 ```typescript
 // ✅ Good - Pure function with Result type
 export async function createRun(
   db: Database,
-  input: CreateRunInput
+  input: CreateRunInput,
 ): Promise<Result<Run, Error>> {
   try {
     const row = await db.one<RunDbRow>(
       `INSERT INTO run (id, org_id, status, input_data)
        VALUES ($(id), $(orgId), $(status), $(inputData))
        RETURNING *`,
-      { id, orgId, status, inputData }
+      { id, orgId, status, inputData },
     );
     return success(mapRunFromDb(row));
   } catch (error) {
@@ -163,65 +180,73 @@ export async function createRun(
 // ❌ Bad - Class-based approach
 export class RunService {
   async createRun(input: CreateRunInput): Promise<Run> {
-    // Don't do this
+    // Don"t do this
   }
 }
 ```
 
 ### REST Route Pattern
+
 ```typescript
 // ✅ Good - Zod validation, proper error handling
-router.post('/', authenticate, async (req, res) => {
+router.post("/", authenticate, async (req, res) => {
   try {
     const input = createRunSchema.parse(req.body);
     const result = await createRun(db, input);
-    
+
     if (!result.success) {
       res.status(400).json({ error: result.error.message });
       return;
     }
-    
+
     res.status(201).json(result.data);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      res.status(400).json({ error: 'Invalid request', details: error.errors });
+      res.status(400).json({ error: "Invalid request", details: error.errors });
       return;
     }
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 ```
 
 ### Client Usage Pattern
+
 ```typescript
 // ✅ Good - Always check Result.success
 const result = await foreman.createTask({
-  runId: 'run-123',
-  type: 'process',
-  inputData: { /* data */ }
+  runId: "run-123",
+  type: "process",
+  inputData: {
+    /* data */
+  },
 });
 
 if (!result.success) {
-  logger.error('Failed to create task', result.error);
+  logger.error("Failed to create task", result.error);
   return;
 }
 
 const task = result.data;
 
 // ❌ Bad - Assuming success
-const task = await foreman.createTask({ /* ... */ });
-// This won't work - client returns Result types
+const task = await foreman.createTask({
+  /* ... */
+});
+// This won"t work - client returns Result types
 ```
 
 ## Key Data Model Concepts
 
 ### Runs
+
 - Top-level execution context
 - Contains input/output data and metadata
 - Tracks overall status and metrics
 - Organization-scoped for multi-tenancy
 
 ### Tasks
+
 - Individual units of work within a run
 - Hierarchical (parent-child relationships)
 - Status lifecycle: pending → queued → running → completed/failed
@@ -229,6 +254,7 @@ const task = await foreman.createTask({ /* ... */ });
 - Links to external queue job IDs
 
 ### Run Data
+
 - Key-value storage for inter-task communication
 - Supports multiple values per key (no unique constraint)
 - Tags array for categorization and filtering
@@ -236,6 +262,7 @@ const task = await foreman.createTask({ /* ... */ });
 - Tracks which task created each entry
 
 ### Authentication
+
 - Simple API key format validation: `fmn_[env]_[orgId]_[random]`
 - No database storage (fully trusted environment)
 - Organization ID extracted from key
@@ -246,6 +273,7 @@ const task = await foreman.createTask({ /* ... */ });
 ## Common Tasks
 
 ### Adding a New Domain Entity
+
 1. Add types to `foreman-server/src/types.ts`
 2. Create migration in `/database/foreman/migrations/`
 3. Add mapper functions to `foreman-server/src/mappers.ts`
@@ -254,6 +282,7 @@ const task = await foreman.createTask({ /* ... */ });
 6. Update client in `foreman-client/src/index.ts`
 
 ### Adding a New API Endpoint
+
 1. Define request/response types
 2. Create Zod validation schemas
 3. Implement domain function with Result type
@@ -262,6 +291,7 @@ const task = await foreman.createTask({ /* ... */ });
 6. Document in `/docs/api.md`
 
 ### Database Changes
+
 1. Create migration: `npm run migrate:foreman:make your_migration_name`
 2. Edit migration file with up/down functions
 3. Run migration: `npm run migrate:foreman:latest` (only when asked)
@@ -288,6 +318,7 @@ npm run test:client:grep -- "test name"
 ### Testing Guidelines for Debugging and Fixes
 
 **IMPORTANT**: When fixing bugs or debugging issues:
+
 1. **Always run individual tests** when fixing specific issues
 2. Use `npm run test:integration:grep -- "test name"` to run specific integration test suites
 3. Use `npm run test:client:grep -- "test name"` for client-specific tests
@@ -295,6 +326,7 @@ npm run test:client:grep -- "test name"
 5. Run `npm test` for the full test suite after individual tests pass
 
 This approach:
+
 - Provides faster feedback loops
 - Makes debugging easier
 - Prevents breaking other tests while fixing one
@@ -303,19 +335,24 @@ This approach:
 ## Important Notes
 
 ### Queue Integration Pattern
+
 The core principle of Foreman:
+
 ```typescript
 // 1. Create task with full data in Foreman
-const task = await foreman.createTask({ /* all data */ });
+const task = await foreman.createTask({
+  /* all data */
+});
 
 // 2. Queue ONLY the task ID
-await queue.add('process', { taskId: task.data.id });
+await queue.add("process", { taskId: task.data.id });
 
 // 3. Worker fetches full data from Foreman
 const taskData = await foreman.getTask(taskId);
 ```
 
 ### Security Model
+
 - Fully trusted environment behind firewall
 - Simple API key format validation only
 - Organization ID extracted from API key
@@ -325,7 +362,9 @@ const taskData = await foreman.getTask(taskId);
 ### API Response Formats
 
 #### Pagination
+
 All list endpoints return paginated results with this structure:
+
 ```typescript
 {
   data: T[],
@@ -338,16 +377,18 @@ All list endpoints return paginated results with this structure:
 ```
 
 #### Error Responses
+
 - 400: Invalid request data or validation errors
 - 401: Authentication required or invalid API key
 - 404: Resource not found
 - 500: Internal server error
 
 Error format:
+
 ```json
 {
   "error": "Error message",
-  "details": []  // Optional, for validation errors
+  "details": [] // Optional, for validation errors
 }
 ```
 
@@ -361,10 +402,10 @@ The `GET /api/v1/runs/:runId/data` endpoint supports flexible querying:
 - `keyPattern`: Glob pattern for keys
 - `tags`: Filter by tags (comma-separated)
 - `tagStartsWith`: Tag prefix match
-- `tagMode`: 'any' (default) or 'all'
+- `tagMode`: "any" (default) or "all"
 - `includeAll`: Return all values (not just latest per key)
-- `sortBy`: 'created_at' (default), 'updated_at', or 'key'
-- `sortOrder`: 'desc' (default) or 'asc'
+- `sortBy`: "created_at" (default), "updated_at", or "key"
+- `sortOrder`: "desc" (default) or "asc"
 - Standard pagination: `limit`, `offset`
 
 ## Error Handling

@@ -1,4 +1,4 @@
-import fetch, { RequestInit, Response } from 'node-fetch';
+import fetch, { RequestInit, Response } from "node-fetch";
 
 export interface HttpResponse<T = any> {
   data: T;
@@ -14,17 +14,17 @@ export class TestHttpClient {
   constructor(baseUrl: string, options?: { headers?: Record<string, string> }) {
     this.baseUrl = baseUrl;
     this.defaultHeaders = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       // Default test API key
-      'x-api-key': 'test-api-key',
-      ...options?.headers
+      "x-api-key": "test-api-key",
+      ...options?.headers,
     };
   }
 
   private async parseResponse<T>(response: Response): Promise<HttpResponse<T>> {
     const text = await response.text();
     let data: T;
-    
+
     // Try to parse as JSON, otherwise return text
     try {
       data = JSON.parse(text);
@@ -42,65 +42,83 @@ export class TestHttpClient {
       data,
       status: response.status,
       statusText: response.statusText,
-      headers
+      headers,
     };
   }
 
   async request<T = any>(
     path: string,
-    options?: RequestInit
+    options?: RequestInit,
   ): Promise<HttpResponse<T>> {
     const url = `${this.baseUrl}${path}`;
     const response = await fetch(url, {
       ...options,
       headers: {
         ...this.defaultHeaders,
-        ...options?.headers
-      }
+        ...options?.headers,
+      },
     });
 
     return this.parseResponse<T>(response);
   }
 
-  async get<T = any>(path: string, headers?: Record<string, string>): Promise<HttpResponse<T>> {
-    return this.request<T>(path, { method: 'GET', headers });
+  async get<T = any>(
+    path: string,
+    headers?: Record<string, string>,
+  ): Promise<HttpResponse<T>> {
+    return this.request<T>(path, { method: "GET", headers });
   }
 
-  async post<T = any>(path: string, body?: any, headers?: Record<string, string>): Promise<HttpResponse<T>> {
+  async post<T = any>(
+    path: string,
+    body?: any,
+    headers?: Record<string, string>,
+  ): Promise<HttpResponse<T>> {
     return this.request<T>(path, {
-      method: 'POST',
+      method: "POST",
       body: body ? JSON.stringify(body) : undefined,
-      headers
+      headers,
     });
   }
 
-  async put<T = any>(path: string, body?: any, headers?: Record<string, string>): Promise<HttpResponse<T>> {
+  async put<T = any>(
+    path: string,
+    body?: any,
+    headers?: Record<string, string>,
+  ): Promise<HttpResponse<T>> {
     return this.request<T>(path, {
-      method: 'PUT',
+      method: "PUT",
       body: body ? JSON.stringify(body) : undefined,
-      headers
+      headers,
     });
   }
 
-  async patch<T = any>(path: string, body?: any, headers?: Record<string, string>): Promise<HttpResponse<T>> {
+  async patch<T = any>(
+    path: string,
+    body?: any,
+    headers?: Record<string, string>,
+  ): Promise<HttpResponse<T>> {
     return this.request<T>(path, {
-      method: 'PATCH',
+      method: "PATCH",
       body: body ? JSON.stringify(body) : undefined,
-      headers
+      headers,
     });
   }
 
-  async delete<T = any>(path: string, headers?: Record<string, string>): Promise<HttpResponse<T>> {
-    return this.request<T>(path, { method: 'DELETE', headers });
+  async delete<T = any>(
+    path: string,
+    headers?: Record<string, string>,
+  ): Promise<HttpResponse<T>> {
+    return this.request<T>(path, { method: "DELETE", headers });
   }
 
   // Convenience methods for testing
   setApiKey(apiKey: string): void {
-    this.defaultHeaders['x-api-key'] = apiKey;
+    this.defaultHeaders["x-api-key"] = apiKey;
   }
 
   setAuthHeader(value: string): void {
-    this.defaultHeaders['Authorization'] = value;
+    this.defaultHeaders["Authorization"] = value;
   }
 
   removeHeader(name: string): void {

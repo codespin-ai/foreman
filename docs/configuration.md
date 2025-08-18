@@ -8,60 +8,60 @@ Foreman uses environment variables for configuration. Most have sensible default
 
 ### Database Configuration
 
-| Variable | Description | Default | Required |
-| -------- | ----------- | ------- | -------- |
-| `FOREMAN_DB_HOST` | PostgreSQL host | `localhost` | Yes |
-| `FOREMAN_DB_PORT` | PostgreSQL port | `5432` | Yes |
-| `FOREMAN_DB_NAME` | Database name | `foreman` | Yes |
-| `FOREMAN_DB_USER` | Database user | `postgres` | Yes |
-| `FOREMAN_DB_PASSWORD` | Database password | - | Yes |
-| `FOREMAN_DB_SSL` | Enable SSL connection | `false` | No |
+| Variable              | Description           | Default     | Required |
+| --------------------- | --------------------- | ----------- | -------- |
+| `FOREMAN_DB_HOST`     | PostgreSQL host       | `localhost` | Yes      |
+| `FOREMAN_DB_PORT`     | PostgreSQL port       | `5432`      | Yes      |
+| `FOREMAN_DB_NAME`     | Database name         | `foreman`   | Yes      |
+| `FOREMAN_DB_USER`     | Database user         | `postgres`  | Yes      |
+| `FOREMAN_DB_PASSWORD` | Database password     | -           | Yes      |
+| `FOREMAN_DB_SSL`      | Enable SSL connection | `false`     | No       |
 
 ### Redis Configuration
 
-| Variable | Description | Default |
-| -------- | ----------- | ------- |
-| `REDIS_HOST` | Redis host | `localhost` |
-| `REDIS_PORT` | Redis port | `6379` |
-| `REDIS_PASSWORD` | Redis password | - |
-| `REDIS_DB` | Redis database number | `0` |
+| Variable         | Description           | Default     |
+| ---------------- | --------------------- | ----------- |
+| `REDIS_HOST`     | Redis host            | `localhost` |
+| `REDIS_PORT`     | Redis port            | `6379`      |
+| `REDIS_PASSWORD` | Redis password        | -           |
+| `REDIS_DB`       | Redis database number | `0`         |
 
 ### Queue Configuration
 
-| Variable | Description | Default |
-| -------- | ----------- | ------- |
-| `TASK_QUEUE_NAME` | BullMQ task queue name | `foreman:tasks` |
+| Variable            | Description              | Default           |
+| ------------------- | ------------------------ | ----------------- |
+| `TASK_QUEUE_NAME`   | BullMQ task queue name   | `foreman:tasks`   |
 | `RESULT_QUEUE_NAME` | BullMQ result queue name | `foreman:results` |
 
 ### Server Configuration
 
-| Variable | Description | Default |
-| -------- | ----------- | ------- |
-| `PORT` | Server port | `3000` |
-| `LOG_LEVEL` | Logging level (debug/info/warn/error) | `info` |
-| `NODE_ENV` | Environment (development/production) | `development` |
-| `CORS_ORIGIN` | Allowed CORS origins (comma-separated) | `*` |
+| Variable      | Description                            | Default       |
+| ------------- | -------------------------------------- | ------------- |
+| `PORT`        | Server port                            | `3000`        |
+| `LOG_LEVEL`   | Logging level (debug/info/warn/error)  | `info`        |
+| `NODE_ENV`    | Environment (development/production)   | `development` |
+| `CORS_ORIGIN` | Allowed CORS origins (comma-separated) | `*`           |
 
 ### Authentication Configuration
 
-| Variable | Description | Default |
-| -------- | ----------- | ------- |
-| `FOREMAN_API_KEY` | Default API key for testing | - |
+| Variable                  | Description                   | Default                  |
+| ------------------------- | ----------------------------- | ------------------------ |
+| `FOREMAN_API_KEY`         | Default API key for testing   | -                        |
 | `FOREMAN_API_KEY_ENABLED` | Enable API key authentication | `true` if API key is set |
 
 **Note**: In production, always use proper API keys. The format is: `fmn_[environment]_[organizationId]_[random]`
 
 ### Rate Limiting
 
-| Variable | Description | Default |
-| -------- | ----------- | ------- |
-| `RATE_LIMIT_WINDOW_MS` | Rate limit window in milliseconds | `900000` (15 min) |
-| `RATE_LIMIT_MAX_REQUESTS` | Max requests per window | `100` |
+| Variable                  | Description                       | Default           |
+| ------------------------- | --------------------------------- | ----------------- |
+| `RATE_LIMIT_WINDOW_MS`    | Rate limit window in milliseconds | `900000` (15 min) |
+| `RATE_LIMIT_MAX_REQUESTS` | Max requests per window           | `100`             |
 
 ### Docker-Specific Configuration
 
-| Variable | Description | Default |
-| -------- | ----------- | ------- |
+| Variable         | Description                             | Default |
+| ---------------- | --------------------------------------- | ------- |
 | `RUN_MIGRATIONS` | Auto-run database migrations on startup | `false` |
 
 ## Configuration Examples
@@ -144,22 +144,23 @@ cp .env.example .env
 nano .env
 
 # Load in your application
-# Add to your startup script: require('dotenv').config()
+# Add to your startup script: require("dotenv").config()
 ```
 
 ## Client Configuration
 
 The foreman-client library uses these environment variables as defaults:
 
-| Variable | Description |
-| -------- | ----------- |
-| `FOREMAN_ENDPOINT` | Default Foreman server URL |
-| `FOREMAN_API_KEY` | Default API key for authentication |
-| `FOREMAN_TIMEOUT` | Default request timeout in milliseconds |
+| Variable           | Description                             |
+| ------------------ | --------------------------------------- |
+| `FOREMAN_ENDPOINT` | Default Foreman server URL              |
+| `FOREMAN_API_KEY`  | Default API key for authentication      |
+| `FOREMAN_TIMEOUT`  | Default request timeout in milliseconds |
 
 ## Configuration Validation
 
 The server validates configuration on startup:
+
 - Required database configuration must be present
 - Redis configuration is validated when Redis features are used
 - API key format is validated if authentication is enabled
@@ -169,5 +170,5 @@ The server validates configuration on startup:
 1. **Never commit secrets** - Use environment variables or secret management systems
 2. **Rotate API keys regularly** - Generate new keys periodically
 3. **Use SSL in production** - Enable `FOREMAN_DB_SSL` for database connections
-4. **Restrict CORS origins** - Don't use `*` in production
+4. **Restrict CORS origins** - Don"t use `*` in production
 5. **Enable rate limiting** - Protect against abuse

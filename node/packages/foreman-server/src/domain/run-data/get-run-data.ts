@@ -1,14 +1,14 @@
-import { Result, success, failure } from '@codespin/foreman-core';
-import { createLogger } from '@codespin/foreman-logger';
-import type { Database } from '@codespin/foreman-db';
-import type { RunData, RunDataDbRow } from '../../types.js';
-import { mapRunDataFromDb } from '../../mappers.js';
+import { Result, success, failure } from "@codespin/foreman-core";
+import { createLogger } from "@codespin/foreman-logger";
+import type { Database } from "@codespin/foreman-db";
+import type { RunData, RunDataDbRow } from "../../types.js";
+import { mapRunDataFromDb } from "../../mappers.js";
 
-const logger = createLogger('foreman:domain:run-data');
+const logger = createLogger("foreman:domain:run-data");
 
 /**
  * Get run data by run ID and key
- * 
+ *
  * @param db - Database connection
  * @param runId - Run ID
  * @param key - Data key
@@ -19,7 +19,7 @@ export async function getRunData(
   db: Database,
   runId: string,
   key: string,
-  orgId: string
+  orgId: string,
 ): Promise<Result<RunData, Error>> {
   try {
     const row = await db.oneOrNone<RunDataDbRow>(
@@ -31,16 +31,16 @@ export async function getRunData(
          AND r.org_id = $(orgId)
        ORDER BY rd.created_at DESC
        LIMIT 1`,
-      { runId, key, orgId }
+      { runId, key, orgId },
     );
-    
+
     if (!row) {
       return failure(new Error(`Run data not found: ${runId}/${key}`));
     }
-    
+
     return success(mapRunDataFromDb(row));
   } catch (error) {
-    logger.error('Failed to get run data', { error, runId, key, orgId });
+    logger.error("Failed to get run data", { error, runId, key, orgId });
     return failure(error as Error);
   }
 }

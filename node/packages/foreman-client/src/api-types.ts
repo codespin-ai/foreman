@@ -8,7 +8,7 @@
 export type Run = {
   id: string;
   orgId: string;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  status: "pending" | "running" | "completed" | "failed" | "cancelled";
   inputData: unknown;
   outputData?: unknown;
   errorData?: unknown;
@@ -28,7 +28,7 @@ export type CreateRunInput = {
 };
 
 export type UpdateRunInput = {
-  status?: Run['status'];
+  status?: Run["status"];
   outputData?: unknown;
   errorData?: unknown;
   metadata?: Record<string, unknown>;
@@ -43,7 +43,14 @@ export type Task = {
   parentTaskId?: string;
   orgId: string;
   type: string;
-  status: 'pending' | 'queued' | 'running' | 'completed' | 'failed' | 'cancelled' | 'retrying';
+  status:
+    | "pending"
+    | "queued"
+    | "running"
+    | "completed"
+    | "failed"
+    | "cancelled"
+    | "retrying";
   inputData: unknown;
   outputData?: unknown;
   errorData?: unknown;
@@ -68,14 +75,14 @@ export type CreateTaskInput = {
 };
 
 export type UpdateTaskInput = {
-  status?: Task['status'];
+  status?: Task["status"];
   outputData?: unknown;
   errorData?: unknown;
   metadata?: Record<string, unknown>;
   queueJobId?: string;
 };
 
-export type TaskStatus = Task['status'];
+export type TaskStatus = Task["status"];
 
 export type TaskResult = {
   id: string;
@@ -114,18 +121,18 @@ export type QueryRunDataParams = {
   keys?: string[];
   keyStartsWith?: string[];
   keyPattern?: string;
-  
+
   // Tag filters
   tags?: string[];
   tagStartsWith?: string[];
-  tagMode?: 'any' | 'all';
-  
+  tagMode?: "any" | "all";
+
   // Options
   includeAll?: boolean;
   limit?: number;
   offset?: number;
-  sortBy?: 'created_at' | 'updated_at' | 'key';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "created_at" | "updated_at" | "key";
+  sortOrder?: "asc" | "desc";
 };
 
 export type UpdateRunDataTagsInput = {
@@ -140,7 +147,7 @@ export type PaginationParams = {
   limit?: number;
   offset?: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 };
 
 export type PaginatedResult<T> = {

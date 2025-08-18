@@ -2,29 +2,41 @@
  * Foreman API functions
  */
 
-import { Result } from './result.js';
-import type { ForemanConfig } from './types.js';
+import { Result } from "./result.js";
+import type { ForemanConfig } from "./types.js";
 import type {
-  Run, CreateRunInput, UpdateRunInput,
-  Task, CreateTaskInput, UpdateTaskInput, TaskStatus, TaskResult,
-  RunData, CreateRunDataInput, QueryRunDataParams, UpdateRunDataTagsInput,
-  PaginationParams, PaginatedResult
-} from './api-types.js';
-import { httpRequest, buildQueryString } from './http-client.js';
+  Run,
+  CreateRunInput,
+  UpdateRunInput,
+  Task,
+  CreateTaskInput,
+  UpdateTaskInput,
+  TaskStatus,
+  TaskResult,
+  RunData,
+  CreateRunDataInput,
+  QueryRunDataParams,
+  UpdateRunDataTagsInput,
+  PaginationParams,
+  PaginatedResult,
+} from "./api-types.js";
+import { httpRequest, buildQueryString } from "./http-client.js";
 
 /**
  * Create a new run
  */
 export async function createRun(
   config: ForemanConfig,
-  input: CreateRunInput
+  input: CreateRunInput,
 ): Promise<Result<Run, Error>> {
   return httpRequest<Run>({
-    method: 'POST',
+    method: "POST",
     url: `${config.endpoint}/api/v1/runs`,
-    headers: config.apiKey ? { 'Authorization': `Bearer ${config.apiKey}` } : undefined,
+    headers: config.apiKey
+      ? { Authorization: `Bearer ${config.apiKey}` }
+      : undefined,
     body: input,
-    timeout: config.timeout
+    timeout: config.timeout,
   });
 }
 
@@ -33,13 +45,15 @@ export async function createRun(
  */
 export async function getRun(
   config: ForemanConfig,
-  id: string
+  id: string,
 ): Promise<Result<Run, Error>> {
   return httpRequest<Run>({
-    method: 'GET',
+    method: "GET",
     url: `${config.endpoint}/api/v1/runs/${id}`,
-    headers: config.apiKey ? { 'Authorization': `Bearer ${config.apiKey}` } : undefined,
-    timeout: config.timeout
+    headers: config.apiKey
+      ? { Authorization: `Bearer ${config.apiKey}` }
+      : undefined,
+    timeout: config.timeout,
   });
 }
 
@@ -49,14 +63,16 @@ export async function getRun(
 export async function updateRun(
   config: ForemanConfig,
   id: string,
-  input: UpdateRunInput
+  input: UpdateRunInput,
 ): Promise<Result<Run, Error>> {
   return httpRequest<Run>({
-    method: 'PATCH',
+    method: "PATCH",
     url: `${config.endpoint}/api/v1/runs/${id}`,
-    headers: config.apiKey ? { 'Authorization': `Bearer ${config.apiKey}` } : undefined,
+    headers: config.apiKey
+      ? { Authorization: `Bearer ${config.apiKey}` }
+      : undefined,
     body: input,
-    timeout: config.timeout
+    timeout: config.timeout,
   });
 }
 
@@ -65,14 +81,16 @@ export async function updateRun(
  */
 export async function listRuns(
   config: ForemanConfig,
-  params?: PaginationParams & { status?: string }
+  params?: PaginationParams & { status?: string },
 ): Promise<Result<PaginatedResult<Run>, Error>> {
-  const queryString = params ? buildQueryString(params) : '';
+  const queryString = params ? buildQueryString(params) : "";
   return httpRequest<PaginatedResult<Run>>({
-    method: 'GET',
+    method: "GET",
     url: `${config.endpoint}/api/v1/runs${queryString}`,
-    headers: config.apiKey ? { 'Authorization': `Bearer ${config.apiKey}` } : undefined,
-    timeout: config.timeout
+    headers: config.apiKey
+      ? { Authorization: `Bearer ${config.apiKey}` }
+      : undefined,
+    timeout: config.timeout,
   });
 }
 
@@ -81,14 +99,16 @@ export async function listRuns(
  */
 export async function createTask(
   config: ForemanConfig,
-  input: CreateTaskInput
+  input: CreateTaskInput,
 ): Promise<Result<Task, Error>> {
   return httpRequest<Task>({
-    method: 'POST',
+    method: "POST",
     url: `${config.endpoint}/api/v1/tasks`,
-    headers: config.apiKey ? { 'Authorization': `Bearer ${config.apiKey}` } : undefined,
+    headers: config.apiKey
+      ? { Authorization: `Bearer ${config.apiKey}` }
+      : undefined,
     body: input,
-    timeout: config.timeout
+    timeout: config.timeout,
   });
 }
 
@@ -97,13 +117,15 @@ export async function createTask(
  */
 export async function getTask(
   config: ForemanConfig,
-  id: string
+  id: string,
 ): Promise<Result<Task, Error>> {
   return httpRequest<Task>({
-    method: 'GET',
+    method: "GET",
     url: `${config.endpoint}/api/v1/tasks/${id}`,
-    headers: config.apiKey ? { 'Authorization': `Bearer ${config.apiKey}` } : undefined,
-    timeout: config.timeout
+    headers: config.apiKey
+      ? { Authorization: `Bearer ${config.apiKey}` }
+      : undefined,
+    timeout: config.timeout,
   });
 }
 
@@ -113,14 +135,16 @@ export async function getTask(
 export async function updateTask(
   config: ForemanConfig,
   id: string,
-  input: UpdateTaskInput
+  input: UpdateTaskInput,
 ): Promise<Result<Task, Error>> {
   return httpRequest<Task>({
-    method: 'PATCH',
+    method: "PATCH",
     url: `${config.endpoint}/api/v1/tasks/${id}`,
-    headers: config.apiKey ? { 'Authorization': `Bearer ${config.apiKey}` } : undefined,
+    headers: config.apiKey
+      ? { Authorization: `Bearer ${config.apiKey}` }
+      : undefined,
     body: input,
-    timeout: config.timeout
+    timeout: config.timeout,
   });
 }
 
@@ -129,14 +153,16 @@ export async function updateTask(
  */
 export async function listTasks(
   config: ForemanConfig,
-  params?: PaginationParams & { runId?: string; status?: string }
+  params?: PaginationParams & { runId?: string; status?: string },
 ): Promise<Result<PaginatedResult<Task>, Error>> {
-  const queryString = params ? buildQueryString(params) : '';
+  const queryString = params ? buildQueryString(params) : "";
   return httpRequest<PaginatedResult<Task>>({
-    method: 'GET',
+    method: "GET",
     url: `${config.endpoint}/api/v1/tasks${queryString}`,
-    headers: config.apiKey ? { 'Authorization': `Bearer ${config.apiKey}` } : undefined,
-    timeout: config.timeout
+    headers: config.apiKey
+      ? { Authorization: `Bearer ${config.apiKey}` }
+      : undefined,
+    timeout: config.timeout,
   });
 }
 
@@ -166,34 +192,38 @@ export async function waitForTask(params: {
   const startTime = Date.now();
   const timeout = params.timeout || 300000; // 5 minutes default
   const pollInterval = params.pollInterval || 1000; // 1 second default
-  
+
   while (true) {
     const result = await getTask(params.foremanConfig, params.taskId);
     if (!result.success) {
       return result;
     }
-    
+
     const task = result.data;
-    if (task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') {
+    if (
+      task.status === "completed" ||
+      task.status === "failed" ||
+      task.status === "cancelled"
+    ) {
       return {
         success: true,
         data: {
           id: task.id,
           status: task.status,
           outputData: task.outputData,
-          errorData: task.errorData
-        }
+          errorData: task.errorData,
+        },
       };
     }
-    
+
     if (Date.now() - startTime > timeout) {
       return {
         success: false,
-        error: new Error('Task wait timeout')
+        error: new Error("Task wait timeout"),
       };
     }
-    
-    await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+    await new Promise((resolve) => setTimeout(resolve, pollInterval));
   }
 }
 
@@ -203,14 +233,16 @@ export async function waitForTask(params: {
 export async function createRunData(
   config: ForemanConfig,
   runId: string,
-  input: CreateRunDataInput
+  input: CreateRunDataInput,
 ): Promise<Result<RunData, Error>> {
   return httpRequest<RunData>({
-    method: 'POST',
+    method: "POST",
     url: `${config.endpoint}/api/v1/runs/${runId}/data`,
-    headers: config.apiKey ? { 'Authorization': `Bearer ${config.apiKey}` } : undefined,
+    headers: config.apiKey
+      ? { Authorization: `Bearer ${config.apiKey}` }
+      : undefined,
     body: input,
-    timeout: config.timeout
+    timeout: config.timeout,
   });
 }
 
@@ -220,14 +252,27 @@ export async function createRunData(
 export async function queryRunData(
   config: ForemanConfig,
   runId: string,
-  params?: QueryRunDataParams
-): Promise<Result<{ data: RunData[]; pagination: { limit: number; offset: number; total: number } }, Error>> {
-  const queryString = params ? buildQueryString(params) : '';
-  return httpRequest<{ data: RunData[]; pagination: { limit: number; offset: number; total: number } }>({
-    method: 'GET',
+  params?: QueryRunDataParams,
+): Promise<
+  Result<
+    {
+      data: RunData[];
+      pagination: { limit: number; offset: number; total: number };
+    },
+    Error
+  >
+> {
+  const queryString = params ? buildQueryString(params) : "";
+  return httpRequest<{
+    data: RunData[];
+    pagination: { limit: number; offset: number; total: number };
+  }>({
+    method: "GET",
     url: `${config.endpoint}/api/v1/runs/${runId}/data${queryString}`,
-    headers: config.apiKey ? { 'Authorization': `Bearer ${config.apiKey}` } : undefined,
-    timeout: config.timeout
+    headers: config.apiKey
+      ? { Authorization: `Bearer ${config.apiKey}` }
+      : undefined,
+    timeout: config.timeout,
   });
 }
 
@@ -238,14 +283,16 @@ export async function updateRunDataTags(
   config: ForemanConfig,
   runId: string,
   dataId: string,
-  input: UpdateRunDataTagsInput
+  input: UpdateRunDataTagsInput,
 ): Promise<Result<RunData, Error>> {
   return httpRequest<RunData>({
-    method: 'PATCH',
+    method: "PATCH",
     url: `${config.endpoint}/api/v1/runs/${runId}/data/${dataId}/tags`,
-    headers: config.apiKey ? { 'Authorization': `Bearer ${config.apiKey}` } : undefined,
+    headers: config.apiKey
+      ? { Authorization: `Bearer ${config.apiKey}` }
+      : undefined,
     body: input,
-    timeout: config.timeout
+    timeout: config.timeout,
   });
 }
 
@@ -255,13 +302,15 @@ export async function updateRunDataTags(
 export async function deleteRunData(
   config: ForemanConfig,
   runId: string,
-  options: { key?: string; id?: string }
+  options: { key?: string; id?: string },
 ): Promise<Result<{ deleted: number }, Error>> {
   const queryString = buildQueryString(options);
   return httpRequest<{ deleted: number }>({
-    method: 'DELETE',
+    method: "DELETE",
     url: `${config.endpoint}/api/v1/runs/${runId}/data${queryString}`,
-    headers: config.apiKey ? { 'Authorization': `Bearer ${config.apiKey}` } : undefined,
-    timeout: config.timeout
+    headers: config.apiKey
+      ? { Authorization: `Bearer ${config.apiKey}` }
+      : undefined,
+    timeout: config.timeout,
   });
 }

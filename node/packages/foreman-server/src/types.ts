@@ -3,10 +3,22 @@
  */
 
 // Run status enum
-export type RunStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+export type RunStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
 
 // Task status enum
-export type TaskStatus = 'pending' | 'queued' | 'running' | 'completed' | 'failed' | 'cancelled' | 'retrying';
+export type TaskStatus =
+  | "pending"
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "retrying";
 
 // Run domain type
 export type Run = {
@@ -121,7 +133,6 @@ export type RunDataDbRow = {
   updated_at: Date;
 };
 
-
 // API request/response types
 export type CreateRunInput = {
   orgId: string;
@@ -167,7 +178,7 @@ export type PaginationParams = {
   limit?: number;
   offset?: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 };
 
 export type PaginatedResult<T> = {

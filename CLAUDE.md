@@ -144,11 +144,19 @@ See [README.md](../README.md#project-structure) for package details. Key point: 
 
 ## Git Workflow
 
+**CRITICAL GIT SAFETY RULES**:
+
+1. **NEVER use `git push --force` or `git push -f`** - Force pushing destroys history and can lose work permanently
+2. **ALL git push commands require EXPLICIT user authorization** - Never push to remote without the user explicitly asking
+3. **Use revert commits instead of force push** - To undo changes, create revert commits that preserve history
+4. **If you need to overwrite remote**, explain the consequences and get explicit confirmation first
+
 **IMPORTANT**: NEVER commit and push changes without explicit user permission. When the user asks you to commit and push:
 
 1. Run `./format-all.sh` to format all files with Prettier
 2. Run `./lint-all.sh` to ensure code passes linting
 3. Follow the git commit guidelines in the main Claude system prompt
+4. Get explicit user confirmation before any `git push`
 
 ## Configuration
 

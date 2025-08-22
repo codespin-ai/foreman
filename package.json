@@ -8,7 +8,7 @@
     "build": "./build.sh",
     "clean": "./clean.sh",
     "start": "./start.sh",
-    "test": "npm run test:integration:all",
+    "test": "cd node/packages/foreman-integration-tests && npm test && cd ../foreman-client && npm test",
     "migrate:all": "./scripts/db-all.sh migrate:latest",
     "migrate:all:rollback": "./scripts/db-all.sh migrate:rollback",
     "migrate:all:status": "./scripts/db-all.sh migrate:status",
@@ -20,11 +20,9 @@
     "seed:foreman:make": "knex seed:make --knexfile database/foreman/knexfile.js",
     "seed:foreman:run": "knex seed:run --knexfile database/foreman/knexfile.js",
     "db:dump-schema": "./scripts/dump-db-schema.sh",
-    "test:integration:foreman": "cd node/packages/foreman-integration-tests && npm test",
+    "test:grep": "(cd node/packages/foreman-integration-tests && npm run test:grep) ; (cd node/packages/foreman-client && npm run test:grep)",
     "test:integration:grep": "cd node/packages/foreman-integration-tests && npm run test:grep",
-    "test:client": "cd node/packages/foreman-client && npm test",
-    "test:client:grep": "cd node/packages/foreman-client && npm run test:grep",
-    "test:integration:all": "npm run test:integration:foreman && npm run test:client"
+    "test:client:grep": "cd node/packages/foreman-client && npm run test:grep"
   },
   "devDependencies": {
     "@types/chai": "^5.2.2",

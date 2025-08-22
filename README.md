@@ -492,24 +492,16 @@ cd devenv
 #### Test Commands
 
 ```bash
-# Run full integration test suite (recommended)
+# Run all tests (integration + client)
 npm test
 
-# Run all tests (integration + client)
-npm run test:integration:all
-
-# Run integration tests only
-npm run test:integration:foreman
-
-# Run client tests only
-npm run test:client
-
 # Run specific test suite
-npm run test:integration:grep -- "Organizations"
-npm run test:client:grep -- "Run Management"
+npm run test:grep -- "Organizations"        # Search both integration and client tests
+npm run test:integration:grep -- "Workflow" # Only integration tests
+npm run test:client:grep -- "Run Management" # Only client tests
 
 # Run tests with verbose logging
-VERBOSE_TESTS=true npm run test:integration:all
+VERBOSE_TESTS=true npm test
 ```
 
 #### Test Infrastructure

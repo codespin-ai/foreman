@@ -14,8 +14,8 @@ export default {
     host: process.env.FOREMAN_DB_HOST || "localhost",
     port: parseInt(process.env.FOREMAN_DB_PORT || "5432"),
     database: process.env.FOREMAN_DB_NAME || "foreman",
-    user: process.env.FOREMAN_DB_USER || "foreman",
-    password: process.env.FOREMAN_DB_PASSWORD || "foreman",
+    user: process.env.FOREMAN_DB_USER || "postgres",
+    password: process.env.FOREMAN_DB_PASSWORD || "postgres",
   },
   migrations: {
     directory: join(__dirname, "migrations"),

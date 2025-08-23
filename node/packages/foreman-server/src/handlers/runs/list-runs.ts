@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { createLogger } from "@codespin/foreman-logger";
-import { getDb } from "@codespin/foreman-db";
+import { createContext } from "../create-context.js";
 import { listRuns } from "../../domain/run/list-runs.js";
 
 const logger = createLogger("foreman:handlers:runs:list");
@@ -26,9 +26,9 @@ export async function listRunsHandler(
 ): Promise<void> {
   try {
     const params = listRunsSchema.parse(req.query);
-    const db = getDb();
+    const ctx = createContext(req);
 
-    const result = await listRuns(db, req.auth!.orgId, params);
+    const result = await listRuns(ctx, req.auth!.orgId, params);
 
     if (!result.success) {
       res.status(400).json({ error: result.error.message });

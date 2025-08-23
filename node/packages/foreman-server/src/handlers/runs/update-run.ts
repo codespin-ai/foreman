@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { createLogger } from "@codespin/foreman-logger";
-import { getDb } from "@codespin/foreman-db";
+import { createContext } from "../create-context.js";
 import { updateRun } from "../../domain/run/update-run.js";
 
 const logger = createLogger("foreman:handlers:runs:update");
@@ -25,9 +25,9 @@ export async function updateRunHandler(
 ): Promise<void> {
   try {
     const input = updateRunSchema.parse(req.body);
-    const db = getDb();
+    const ctx = createContext(req);
 
-    const result = await updateRun(db, req.params.id!, req.auth!.orgId, input);
+    const result = await updateRun(ctx, req.params.id!, req.auth!.orgId, input);
 
     if (!result.success) {
       res.status(404).json({ error: result.error.message });

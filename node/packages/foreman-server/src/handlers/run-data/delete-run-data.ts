@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { createLogger } from "@codespin/foreman-logger";
-import { getDb } from "@codespin/foreman-db";
+import { createContext } from "../create-context.js";
 
 const logger = createLogger("foreman:handlers:run-data:delete");
 
@@ -25,7 +25,8 @@ export async function deleteRunDataHandler(
   try {
     const { runId } = req.params;
     const queryParams = deleteRunDataSchema.parse(req.query);
-    const db = getDb();
+    const ctx = createContext(req);
+    const { db } = ctx;
 
     let deletedCount = 0;
 

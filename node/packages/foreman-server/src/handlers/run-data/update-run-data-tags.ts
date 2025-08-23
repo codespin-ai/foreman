@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { createLogger } from "@codespin/foreman-logger";
-import { getDb } from "@codespin/foreman-db";
+import { createContext } from "../create-context.js";
 import { updateRunDataTags } from "../../domain/run-data/update-run-data-tags.js";
 
 const logger = createLogger("foreman:handlers:run-data:update-tags");
@@ -22,9 +22,14 @@ export async function updateRunDataTagsHandler(
   try {
     const { dataId } = req.params;
     const input = updateRunDataTagsSchema.parse(req.body);
-    const db = getDb();
+    const ctx = createContext(req);
 
-    const result = await updateRunDataTags(db, dataId!, req.auth!.orgId, input);
+    const result = await updateRunDataTags(
+      ctx,
+      dataId!,
+      req.auth!.orgId,
+      input,
+    );
 
     if (!result.success) {
       res.status(404).json({ error: result.error.message });

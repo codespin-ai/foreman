@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { createLogger } from "@codespin/foreman-logger";
-import { getDb } from "@codespin/foreman-db";
+import { createContext } from "../create-context.js";
 import { createRun } from "../../domain/run/create-run.js";
 
 const logger = createLogger("foreman:handlers:runs:create");
@@ -21,9 +21,9 @@ export async function createRunHandler(
 ): Promise<void> {
   try {
     const input = createRunSchema.parse(req.body);
-    const db = getDb();
+    const ctx = createContext(req);
 
-    const result = await createRun(db, {
+    const result = await createRun(ctx, {
       orgId: req.auth!.orgId,
       inputData: input.inputData,
       metadata: input.metadata,

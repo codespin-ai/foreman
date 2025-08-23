@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { createLogger } from "@codespin/foreman-logger";
-import { getDb } from "@codespin/foreman-db";
+import { createContext } from "../create-context.js";
 import {
   queryRunData,
   type QueryRunDataParams,
@@ -55,7 +55,7 @@ export async function queryRunDataHandler(
   try {
     const { runId } = req.params;
     const params = queryRunDataSchema.parse(req.query);
-    const db = getDb();
+    const ctx = createContext(req);
 
     // Convert parsed params to QueryRunDataParams
     const queryParams: QueryRunDataParams = {
@@ -73,7 +73,12 @@ export async function queryRunDataHandler(
       sortOrder: params.sortOrder,
     };
 
-    const result = await queryRunData(db, runId!, req.auth!.orgId, queryParams);
+    const result = await queryRunData(
+      ctx,
+      runId!,
+      req.auth!.orgId,
+      queryParams,
+    );
 
     if (!result.success) {
       res.status(404).json({ error: result.error.message });

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { createLogger } from "@codespin/foreman-logger";
-import { getDb } from "@codespin/foreman-db";
+import { createContext } from "../create-context.js";
 import { getTask } from "../../domain/task/get-task.js";
 
 const logger = createLogger("foreman:handlers:tasks:get");
@@ -13,8 +13,8 @@ export async function getTaskHandler(
   res: Response,
 ): Promise<void> {
   try {
-    const db = getDb();
-    const result = await getTask(db, req.params.id!, req.auth!.orgId);
+    const ctx = createContext(req);
+    const result = await getTask(ctx, req.params.id!, req.auth!.orgId);
 
     if (!result.success) {
       res.status(404).json({ error: result.error.message });

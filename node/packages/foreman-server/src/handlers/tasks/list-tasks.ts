@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { createLogger } from "@codespin/foreman-logger";
-import { getDb } from "@codespin/foreman-db";
+import { createContext } from "../create-context.js";
 import { listTasks } from "../../domain/task/list-tasks.js";
 
 const logger = createLogger("foreman:handlers:tasks:list");
@@ -27,9 +27,9 @@ export async function listTasksHandler(
 ): Promise<void> {
   try {
     const params = listTasksSchema.parse(req.query);
-    const db = getDb();
+    const ctx = createContext(req);
 
-    const result = await listTasks(db, req.auth!.orgId, params);
+    const result = await listTasks(ctx, req.auth!.orgId, params);
 
     if (!result.success) {
       res.status(400).json({ error: result.error.message });

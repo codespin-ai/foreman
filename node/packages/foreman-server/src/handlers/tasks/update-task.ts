@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { createLogger } from "@codespin/foreman-logger";
-import { getDb } from "@codespin/foreman-db";
+import { createContext } from "../create-context.js";
 import { updateTask } from "../../domain/task/update-task.js";
 
 const logger = createLogger("foreman:handlers:tasks:update");
@@ -34,9 +34,14 @@ export async function updateTaskHandler(
 ): Promise<void> {
   try {
     const input = updateTaskSchema.parse(req.body);
-    const db = getDb();
+    const ctx = createContext(req);
 
-    const result = await updateTask(db, req.params.id!, req.auth!.orgId, input);
+    const result = await updateTask(
+      ctx,
+      req.params.id!,
+      req.auth!.orgId,
+      input,
+    );
 
     if (!result.success) {
       res.status(404).json({ error: result.error.message });

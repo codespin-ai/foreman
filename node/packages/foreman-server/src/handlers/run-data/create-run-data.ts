@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { createLogger } from "@codespin/foreman-logger";
-import { getDb } from "@codespin/foreman-db";
+import { createContext } from "../create-context.js";
 import { createRunData } from "../../domain/run-data/create-run-data.js";
 
 const logger = createLogger("foreman:handlers:run-data:create");
@@ -25,9 +25,9 @@ export async function createRunDataHandler(
   try {
     const input = createRunDataSchema.parse(req.body);
     const { runId } = req.params;
-    const db = getDb();
+    const ctx = createContext(req);
 
-    const result = await createRunData(db, req.auth!.orgId, {
+    const result = await createRunData(ctx, req.auth!.orgId, {
       runId: runId!,
       key: input.key,
       value: input.value,

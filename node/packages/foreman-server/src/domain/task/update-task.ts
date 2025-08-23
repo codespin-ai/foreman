@@ -1,6 +1,6 @@
 import { Result, success, failure } from "@codespin/foreman-core";
 import { createLogger } from "@codespin/foreman-logger";
-import type { Database } from "@codespin/foreman-db";
+import type { DataContext } from "../data-context.js";
 import { sql } from "@codespin/foreman-db";
 import type { Task, TaskDbRow, UpdateTaskInput } from "../../types.js";
 import { mapTaskFromDb } from "../../mappers.js";
@@ -10,20 +10,20 @@ const logger = createLogger("foreman:domain:task");
 /**
  * Update a task
  *
- * @param db - Database connection
+ * @param ctx - Data context containing database connection
  * @param id - Task ID
  * @param orgId - Organization ID for access control
  * @param input - Update parameters
  * @returns Result containing the updated task or an error
  */
 export async function updateTask(
-  db: Database,
+  ctx: DataContext,
   id: string,
   orgId: string,
   input: UpdateTaskInput,
 ): Promise<Result<Task, Error>> {
   try {
-    return await db.tx(async (t) => {
+    return await ctx.db.tx(async (t) => {
       const updateParams: Record<string, unknown> = {};
       const additionalUpdates: string[] = [];
 

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { createLogger } from "@codespin/foreman-logger";
-import { getDb } from "@codespin/foreman-db";
+import { createContext } from "../create-context.js";
 import { createTask } from "../../domain/task/create-task.js";
 
 const logger = createLogger("foreman:handlers:tasks:create");
@@ -25,9 +25,9 @@ export async function createTaskHandler(
 ): Promise<void> {
   try {
     const input = createTaskSchema.parse(req.body);
-    const db = getDb();
+    const ctx = createContext(req);
 
-    const result = await createTask(db, req.auth!.orgId, {
+    const result = await createTask(ctx, req.auth!.orgId, {
       runId: input.runId,
       parentTaskId: input.parentTaskId,
       type: input.type,

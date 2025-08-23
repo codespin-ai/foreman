@@ -1,6 +1,6 @@
 import { Result, success, failure } from "@codespin/foreman-core";
 import { createLogger } from "@codespin/foreman-logger";
-import type { Database } from "@codespin/foreman-db";
+import type { DataContext } from "../data-context.js";
 import type { RunData, RunDataDbRow } from "../../types.js";
 import { mapRunDataFromDb } from "../../mappers.js";
 
@@ -29,21 +29,21 @@ export interface QueryRunDataParams {
 /**
  * Query run data with flexible filtering
  *
- * @param db - Database connection
+ * @param ctx - Data context containing database connection
  * @param runId - Run ID
  * @param orgId - Organization ID for access control
  * @param params - Query parameters
  * @returns Result containing the run data list or an error
  */
 export async function queryRunData(
-  db: Database,
+  ctx: DataContext,
   runId: string,
   orgId: string,
   params: QueryRunDataParams = {},
 ): Promise<Result<RunData[], Error>> {
   try {
     // Verify run exists and belongs to org
-    const runCheck = await db.oneOrNone<{ id: string }>(
+    const runCheck = await ctx.db.oneOrNone<{ id: string }>(
       `SELECT id FROM run WHERE id = $(run_id) AND org_id = $(org_id)`,
       { run_id: runId, org_id: orgId },
     );
@@ -171,7 +171,7 @@ export async function queryRunData(
       queryParams.offset = params.offset;
     }
 
-    const rows = await db.manyOrNone<RunDataDbRow>(query, queryParams);
+    const rows = await ctx.db.manyOrNone<RunDataDbRow>(query, queryParams);
     const data = rows.map(mapRunDataFromDb);
 
     return success(data);

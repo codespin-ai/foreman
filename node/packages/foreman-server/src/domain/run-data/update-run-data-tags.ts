@@ -1,6 +1,6 @@
 import { Result, success, failure } from "@codespin/foreman-core";
 import { createLogger } from "@codespin/foreman-logger";
-import type { Database } from "@codespin/foreman-db";
+import type { DataContext } from "../data-context.js";
 import type { RunData, RunDataDbRow } from "../../types.js";
 import { mapRunDataFromDb } from "../../mappers.js";
 
@@ -14,20 +14,20 @@ export interface UpdateRunDataTagsInput {
 /**
  * Update tags on a run data entry
  *
- * @param db - Database connection
+ * @param ctx - Data context containing database connection
  * @param dataId - Run data entry ID
  * @param orgId - Organization ID for access control
  * @param input - Tags to add/remove
  * @returns Result containing the updated run data or an error
  */
 export async function updateRunDataTags(
-  db: Database,
+  ctx: DataContext,
   dataId: string,
   orgId: string,
   input: UpdateRunDataTagsInput,
 ): Promise<Result<RunData, Error>> {
   try {
-    return await db.tx(async (t) => {
+    return await ctx.db.tx(async (t) => {
       // Verify data entry exists and belongs to org
       const check = await t.oneOrNone<{ tags: string[] }>(
         `SELECT rd.tags

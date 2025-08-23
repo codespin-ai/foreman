@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { Result, success, failure } from "@codespin/foreman-core";
 import { createLogger } from "@codespin/foreman-logger";
-import type { Database } from "@codespin/foreman-db";
+import type { DataContext } from "../data-context.js";
 import { sql } from "@codespin/foreman-db";
 import type { Task, TaskDbRow, CreateTaskInput } from "../../types.js";
 import { mapTaskFromDb } from "../../mappers.js";
@@ -11,18 +11,18 @@ const logger = createLogger("foreman:domain:task");
 /**
  * Create a new task
  *
- * @param db - Database connection
+ * @param ctx - Data context containing database connection
  * @param orgId - Organization ID
  * @param input - Task creation parameters
  * @returns Result containing the created task or an error
  */
 export async function createTask(
-  db: Database,
+  ctx: DataContext,
   orgId: string,
   input: CreateTaskInput,
 ): Promise<Result<Task, Error>> {
   try {
-    return await db.tx(async (t) => {
+    return await ctx.db.tx(async (t) => {
       // Verify run exists and belongs to org
       const runCheck = await t.oneOrNone<{ id: string }>(
         `SELECT id FROM run WHERE id = $(run_id) AND org_id = $(org_id)`,

@@ -1,6 +1,6 @@
 import { Result, success, failure } from "@codespin/foreman-core";
 import { createLogger } from "@codespin/foreman-logger";
-import type { Database } from "@codespin/foreman-db";
+import type { DataContext } from "../data-context.js";
 import type {
   Run,
   RunDbRow,
@@ -14,13 +14,13 @@ const logger = createLogger("foreman:domain:run");
 /**
  * List runs with pagination and filtering
  *
- * @param db - Database connection
+ * @param ctx - Data context containing database connection
  * @param orgId - Organization ID for access control
  * @param params - Pagination and filter parameters
  * @returns Result containing paginated runs or an error
  */
 export async function listRuns(
-  db: Database,
+  ctx: DataContext,
   orgId: string,
   params: PaginationParams & { status?: string },
 ): Promise<Result<PaginatedResult<Run>, Error>> {
@@ -44,14 +44,14 @@ export async function listRuns(
     }
 
     // Get total count
-    const countResult = await db.one<{ count: string }>(
+    const countResult = await ctx.db.one<{ count: string }>(
       `SELECT COUNT(*) as count FROM run WHERE ${conditions.join(" AND ")}`,
       queryParams,
     );
     const total = parseInt(countResult.count);
 
     // Get paginated results
-    const rows = await db.manyOrNone<RunDbRow>(
+    const rows = await ctx.db.manyOrNone<RunDbRow>(
       `SELECT * FROM run 
        WHERE ${conditions.join(" AND ")}
        ORDER BY ${sortBy} ${sortOrder}

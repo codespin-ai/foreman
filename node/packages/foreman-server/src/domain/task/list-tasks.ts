@@ -1,6 +1,6 @@
 import { Result, success, failure } from "@codespin/foreman-core";
 import { createLogger } from "@codespin/foreman-logger";
-import type { Database } from "@codespin/foreman-db";
+import type { DataContext } from "../data-context.js";
 import type {
   Task,
   TaskDbRow,
@@ -14,13 +14,13 @@ const logger = createLogger("foreman:domain:task");
 /**
  * List tasks with pagination and filtering
  *
- * @param db - Database connection
+ * @param ctx - Data context containing database connection
  * @param orgId - Organization ID for access control
  * @param params - Pagination and filter parameters
  * @returns Result containing paginated tasks or an error
  */
 export async function listTasks(
-  db: Database,
+  ctx: DataContext,
   orgId: string,
   params: PaginationParams & { runId?: string; status?: string },
 ): Promise<Result<PaginatedResult<Task>, Error>> {
@@ -49,14 +49,14 @@ export async function listTasks(
     }
 
     // Get total count
-    const countResult = await db.one<{ count: string }>(
+    const countResult = await ctx.db.one<{ count: string }>(
       `SELECT COUNT(*) as count FROM task WHERE ${conditions.join(" AND ")}`,
       queryParams,
     );
     const total = parseInt(countResult.count);
 
     // Get paginated results
-    const rows = await db.manyOrNone<TaskDbRow>(
+    const rows = await ctx.db.manyOrNone<TaskDbRow>(
       `SELECT * FROM task 
        WHERE ${conditions.join(" AND ")}
        ORDER BY ${sortBy} ${sortOrder}

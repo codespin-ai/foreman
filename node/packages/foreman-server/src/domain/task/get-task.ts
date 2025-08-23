@@ -1,6 +1,6 @@
 import { Result, success, failure } from "@codespin/foreman-core";
 import { createLogger } from "@codespin/foreman-logger";
-import type { Database } from "@codespin/foreman-db";
+import type { DataContext } from "../data-context.js";
 import type { Task, TaskDbRow } from "../../types.js";
 import { mapTaskFromDb } from "../../mappers.js";
 
@@ -9,18 +9,18 @@ const logger = createLogger("foreman:domain:task");
 /**
  * Get a task by ID
  *
- * @param db - Database connection
+ * @param ctx - Data context containing database connection
  * @param id - Task ID
  * @param orgId - Organization ID for access control
  * @returns Result containing the task or an error
  */
 export async function getTask(
-  db: Database,
+  ctx: DataContext,
   id: string,
   orgId: string,
 ): Promise<Result<Task, Error>> {
   try {
-    const row = await db.oneOrNone<TaskDbRow>(
+    const row = await ctx.db.oneOrNone<TaskDbRow>(
       `SELECT * FROM task WHERE id = $(id) AND org_id = $(org_id)`,
       { id, org_id: orgId },
     );

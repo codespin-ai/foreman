@@ -1,6 +1,6 @@
 import { Result, success, failure } from "@codespin/foreman-core";
 import { createLogger } from "@codespin/foreman-logger";
-import type { Database } from "@codespin/foreman-db";
+import type { DataContext } from "../data-context.js";
 import { sql } from "@codespin/foreman-db";
 import type { Run, RunDbRow, UpdateRunInput } from "../../types.js";
 import { mapRunFromDb } from "../../mappers.js";
@@ -10,14 +10,14 @@ const logger = createLogger("foreman:domain:run");
 /**
  * Update a run
  *
- * @param db - Database connection
+ * @param ctx - Data context containing database connection
  * @param id - Run ID
  * @param orgId - Organization ID for access control
  * @param input - Update parameters
  * @returns Result containing the updated run or an error
  */
 export async function updateRun(
-  db: Database,
+  ctx: DataContext,
   id: string,
   orgId: string,
   input: UpdateRunInput,
@@ -77,7 +77,7 @@ export async function updateRun(
 
     const allParams = { ...updateParams, id, org_id: orgId };
 
-    const row = await db.oneOrNone<RunDbRow>(
+    const row = await ctx.db.oneOrNone<RunDbRow>(
       `UPDATE run 
        SET ${setClause}
        WHERE id = $(id) AND org_id = $(org_id)

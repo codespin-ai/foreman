@@ -209,6 +209,99 @@ const product = await db.one<ProductDbRow>(
 );
 ```
 
+#### SQL Helper Functions
+
+Use the `sql.insert()` and `sql.update()` helper functions from `@codespin/foreman-db` to construct SQL statements safely and consistently:
+
+```typescript
+import { sql } from "@codespin/foreman-db";
+
+// ✅ Good - Using sql.insert() helper
+const params = {
+  id: input.id,
+  org_id: input.orgId,
+  status: "pending",
+  created_at: new Date(),
+};
+const run = await db.one<RunDbRow>(
+  `${sql.insert("run", params)} RETURNING *`,
+  params,
+);
+
+// ✅ Good - Using sql.update() helper for partial updates
+const updateParams = {
+  status: input.status,
+  output_data: input.outputData,
+};
+const whereParams = {
+  id: taskId,
+  org_id: orgId,
+};
+const query = `
+  ${sql.update("task", updateParams)}
+  WHERE id = $(id) AND org_id = $(org_id)
+  RETURNING *
+`;
+const task = await db.one<TaskDbRow>(query, {
+  ...updateParams,
+  ...whereParams,
+});
+
+// The helpers automatically:
+// - Build column lists from object keys
+// - Create parameter placeholders using named syntax
+// - Ensure consistency across INSERT/UPDATE operations
+```
+
+#### Case Conversion in Database Operations
+
+When working with database operations, use `toSnakeCase` judiciously:
+
+```typescript
+// ✅ Good - Use toSnakeCase when converting incoming camelCase objects
+// Example: REST API input that needs conversion
+const updateParams: Record<string, any> = {};
+if (input.inputData !== undefined) {
+  updateParams.inputData = input.inputData;
+}
+if (input.outputData !== undefined) {
+  updateParams.outputData = input.outputData;
+}
+// Convert the camelCase object to snake_case for database
+const snakeParams = typeUtils.toSnakeCase(updateParams);
+
+// ✅ Good - Directly create snake_case objects when constructing from individual parameters
+// No need for toSnakeCase here since we're manually building the object
+const whereParams = {
+  run_id: runId,
+  org_id: orgId,
+};
+
+// ✅ Good - Direct snake_case construction for simple inserts
+const params = {
+  id: input.id,
+  org_id: input.orgId,
+  created_at: new Date(),
+  status: "pending",
+};
+await db.one(`${sql.insert("run", params)} RETURNING *`, params);
+
+// ❌ Unnecessary - Avoid toSnakeCase when manually constructing objects
+const params = typeUtils.toSnakeCase({
+  runId: runId,
+  orgId: orgId,
+  status: "pending",
+});
+// Instead, directly write: { run_id: runId, org_id: orgId, status: 'pending' }
+```
+
+**Guidelines:**
+
+- Use `toSnakeCase` when you have an existing camelCase object (e.g., from REST API requests)
+- Directly create snake_case objects when constructing from individual parameters
+- This is a pattern to apply judiciously based on context, not a rigid rule
+- Consider readability and maintainability when deciding which approach to use
+
 #### Domain Structure Organization
 
 All database-related functions are organized in domain directories. Example for a "user" domain:

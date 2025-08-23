@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Result, success, failure } from "@codespin/foreman-core";
 import { createLogger } from "@codespin/foreman-logger";
 import type { Database } from "@codespin/foreman-db";
+import { sql } from "@codespin/foreman-db";
 import type { Run, RunDbRow, CreateRunInput } from "../../types.js";
 import { mapRunFromDb } from "../../mappers.js";
 
@@ -21,17 +22,18 @@ export async function createRun(
   try {
     const id = uuidv4();
 
+    const params = {
+      id,
+      org_id: input.orgId,
+      status: "pending",
+      input_data: input.inputData as Record<string, unknown>,
+      metadata: input.metadata || null,
+      created_at: new Date(),
+    };
+
     const row = await db.one<RunDbRow>(
-      `INSERT INTO run (id, org_id, status, input_data, metadata, created_at)
-       VALUES ($(id), $(orgId), $(status), $(inputData), $(metadata), NOW())
-       RETURNING *`,
-      {
-        id,
-        orgId: input.orgId,
-        status: "pending",
-        inputData: input.inputData as Record<string, unknown>,
-        metadata: input.metadata || null,
-      },
+      `${sql.insert("run", params)} RETURNING *`,
+      params,
     );
 
     logger.info("Created run", { id, orgId: input.orgId });

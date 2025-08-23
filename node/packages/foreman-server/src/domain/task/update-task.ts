@@ -1,6 +1,7 @@
 import { Result, success, failure } from "@codespin/foreman-core";
 import { createLogger } from "@codespin/foreman-logger";
 import type { Database } from "@codespin/foreman-db";
+import { sql } from "@codespin/foreman-db";
 import type { Task, TaskDbRow, UpdateTaskInput } from "../../types.js";
 import { mapTaskFromDb } from "../../mappers.js";
 
@@ -23,77 +24,90 @@ export async function updateTask(
 ): Promise<Result<Task, Error>> {
   try {
     return await db.tx(async (t) => {
-      const updates: string[] = [];
-      const params: Record<string, unknown> = { id, orgId };
+      const updateParams: Record<string, unknown> = {};
+      const additionalUpdates: string[] = [];
 
       if (input.status !== undefined) {
-        updates.push("status = $(status)");
-        params.status = input.status;
+        updateParams.status = input.status;
 
         // Set queued_at when transitioning to queued
         if (input.status === "queued") {
-          updates.push("queued_at = COALESCE(queued_at, NOW())");
+          additionalUpdates.push("queued_at = COALESCE(queued_at, NOW())");
         }
 
         // Set started_at when transitioning to running
         if (input.status === "running") {
-          updates.push("started_at = COALESCE(started_at, NOW())");
+          additionalUpdates.push("started_at = COALESCE(started_at, NOW())");
         }
 
         // Set completed_at and calculate duration when transitioning to terminal state
         if (["completed", "failed", "cancelled"].includes(input.status)) {
-          updates.push("completed_at = NOW()");
-          updates.push(
+          additionalUpdates.push("completed_at = NOW()");
+          additionalUpdates.push(
             "duration_ms = EXTRACT(EPOCH FROM (NOW() - COALESCE(started_at, created_at))) * 1000",
           );
         }
 
         // Increment retry count when retrying
         if (input.status === "retrying") {
-          updates.push("retry_count = retry_count + 1");
+          additionalUpdates.push("retry_count = retry_count + 1");
         }
       }
 
       if (input.outputData !== undefined) {
-        updates.push("output_data = $(outputData)");
-        params.outputData = input.outputData as Record<string, unknown>;
+        updateParams.output_data = input.outputData as Record<string, unknown>;
       }
 
       if (input.errorData !== undefined) {
-        updates.push("error_data = $(errorData)");
-        params.errorData = input.errorData as Record<string, unknown>;
+        updateParams.error_data = input.errorData as Record<string, unknown>;
       }
 
       if (input.metadata !== undefined) {
-        updates.push("metadata = $(metadata)");
-        params.metadata = input.metadata as Record<string, unknown>;
+        updateParams.metadata = input.metadata as Record<string, unknown>;
       }
 
       if (input.queueJobId !== undefined) {
-        updates.push("queue_job_id = $(queueJobId)");
-        params.queueJobId = input.queueJobId;
+        updateParams.queue_job_id = input.queueJobId;
       }
 
-      if (updates.length === 0) {
+      if (
+        Object.keys(updateParams).length === 0 &&
+        additionalUpdates.length === 0
+      ) {
         return failure(new Error("No fields to update"));
       }
 
       // Get current task to check run_id
       const currentTask = await t.oneOrNone<{ run_id: string; status: string }>(
-        `SELECT run_id, status FROM task WHERE id = $(id) AND org_id = $(orgId)`,
-        { id, orgId },
+        `SELECT run_id, status FROM task WHERE id = $(id) AND org_id = $(org_id)`,
+        { id, org_id: orgId },
       );
 
       if (!currentTask) {
         return failure(new Error(`Task not found: ${id}`));
       }
 
+      // Build the SET clause
+      let setClause = "";
+      if (Object.keys(updateParams).length > 0) {
+        setClause = sql
+          .update("task", updateParams)
+          .replace("UPDATE task SET ", "");
+        if (additionalUpdates.length > 0) {
+          setClause += ", " + additionalUpdates.join(", ");
+        }
+      } else {
+        setClause = additionalUpdates.join(", ");
+      }
+
+      const allParams = { ...updateParams, id, org_id: orgId };
+
       const row = await t.one<TaskDbRow>(
         `UPDATE task 
-         SET ${updates.join(", ")}
-         WHERE id = $(id) AND org_id = $(orgId)
+         SET ${setClause}
+         WHERE id = $(id) AND org_id = $(org_id)
          RETURNING *`,
-        params,
+        allParams,
       );
 
       // Update run counters if status changed to terminal state
@@ -104,13 +118,13 @@ export async function updateTask(
       ) {
         if (input.status === "completed") {
           await t.none(
-            `UPDATE run SET completed_tasks = completed_tasks + 1 WHERE id = $(runId)`,
-            { runId: currentTask.run_id },
+            `UPDATE run SET completed_tasks = completed_tasks + 1 WHERE id = $(run_id)`,
+            { run_id: currentTask.run_id },
           );
         } else if (input.status === "failed") {
           await t.none(
-            `UPDATE run SET failed_tasks = failed_tasks + 1 WHERE id = $(runId)`,
-            { runId: currentTask.run_id },
+            `UPDATE run SET failed_tasks = failed_tasks + 1 WHERE id = $(run_id)`,
+            { run_id: currentTask.run_id },
           );
         }
       }

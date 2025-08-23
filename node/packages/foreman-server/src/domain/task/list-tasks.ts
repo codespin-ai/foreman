@@ -31,12 +31,16 @@ export async function listTasks(
     const sortOrder = params.sortOrder || "desc";
 
     // Build filter conditions
-    const conditions = ["org_id = $(orgId)"];
-    const queryParams: Record<string, unknown> = { orgId, limit, offset };
+    const conditions = ["org_id = $(org_id)"];
+    const queryParams: Record<string, unknown> = {
+      org_id: orgId,
+      limit,
+      offset,
+    };
 
     if (params.runId) {
-      conditions.push("run_id = $(runId)");
-      queryParams.runId = params.runId;
+      conditions.push("run_id = $(run_id)");
+      queryParams.run_id = params.runId;
     }
 
     if (params.status) {

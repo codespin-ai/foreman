@@ -21,8 +21,8 @@ export async function getRun(
 ): Promise<Result<Run, Error>> {
   try {
     const row = await db.oneOrNone<RunDbRow>(
-      `SELECT * FROM run WHERE id = $(id) AND org_id = $(orgId)`,
-      { id, orgId },
+      `SELECT * FROM run WHERE id = $(id) AND org_id = $(org_id)`,
+      { id, org_id: orgId },
     );
 
     if (!row) {

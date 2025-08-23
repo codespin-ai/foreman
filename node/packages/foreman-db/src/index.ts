@@ -1,6 +1,7 @@
 import pgPromise from "pg-promise";
 import type { IDatabase } from "pg-promise";
 import { createLogger } from "@codespin/foreman-logger";
+export * as sql from "./sql.js";
 
 const logger = createLogger("foreman-db");
 

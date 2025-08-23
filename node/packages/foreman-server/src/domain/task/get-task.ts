@@ -21,8 +21,8 @@ export async function getTask(
 ): Promise<Result<Task, Error>> {
   try {
     const row = await db.oneOrNone<TaskDbRow>(
-      `SELECT * FROM task WHERE id = $(id) AND org_id = $(orgId)`,
-      { id, orgId },
+      `SELECT * FROM task WHERE id = $(id) AND org_id = $(org_id)`,
+      { id, org_id: orgId },
     );
 
     if (!row) {

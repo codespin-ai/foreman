@@ -33,9 +33,9 @@ export async function updateRunDataTags(
         `SELECT rd.tags
          FROM run_data rd
          JOIN run r ON r.id = rd.run_id
-         WHERE rd.id = $(dataId) 
-           AND r.org_id = $(orgId)`,
-        { dataId, orgId },
+         WHERE rd.id = $(data_id) 
+           AND r.org_id = $(org_id)`,
+        { data_id: dataId, org_id: orgId },
       );
 
       if (!check) {
@@ -61,9 +61,9 @@ export async function updateRunDataTags(
         `UPDATE run_data
          SET tags = $(tags),
              updated_at = NOW()
-         WHERE id = $(dataId)
+         WHERE id = $(data_id)
          RETURNING *`,
-        { dataId, tags: newTags },
+        { data_id: dataId, tags: newTags },
       );
 
       logger.info("Updated run data tags", {

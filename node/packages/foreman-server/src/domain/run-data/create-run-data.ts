@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Result, success, failure } from "@codespin/foreman-core";
 import { createLogger } from "@codespin/foreman-logger";
 import type { Database } from "@codespin/foreman-db";
+import { sql } from "@codespin/foreman-db";
 import type { RunData, RunDataDbRow, CreateRunDataInput } from "../../types.js";
 import { mapRunDataFromDb } from "../../mappers.js";
 
@@ -24,8 +25,8 @@ export async function createRunData(
     return await db.tx(async (t) => {
       // Verify run exists and belongs to org
       const runCheck = await t.oneOrNone<{ id: string }>(
-        `SELECT id FROM run WHERE id = $(runId) AND org_id = $(orgId)`,
-        { runId: input.runId, orgId },
+        `SELECT id FROM run WHERE id = $(run_id) AND org_id = $(org_id)`,
+        { run_id: input.runId, org_id: orgId },
       );
 
       if (!runCheck) {
@@ -35,10 +36,10 @@ export async function createRunData(
       // Verify task exists and belongs to the run
       const taskCheck = await t.oneOrNone<{ id: string }>(
         `SELECT id FROM task 
-         WHERE id = $(taskId) 
-           AND run_id = $(runId) 
-           AND org_id = $(orgId)`,
-        { taskId: input.taskId, runId: input.runId, orgId },
+         WHERE id = $(task_id) 
+           AND run_id = $(run_id) 
+           AND org_id = $(org_id)`,
+        { task_id: input.taskId, run_id: input.runId, org_id: orgId },
       );
 
       if (!taskCheck) {
@@ -48,24 +49,22 @@ export async function createRunData(
       const id = uuidv4();
 
       // Insert run data (allows multiple entries per key)
+      const params = {
+        id,
+        run_id: input.runId,
+        task_id: input.taskId,
+        org_id: orgId,
+        key: input.key,
+        value: input.value as Record<string, unknown>,
+        tags: input.tags || [],
+        metadata: input.metadata || null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
       const row = await t.one<RunDataDbRow>(
-        `INSERT INTO run_data (
-          id, run_id, task_id, org_id, key, value, tags, metadata, created_at, updated_at
-        )
-        VALUES (
-          $(id), $(runId), $(taskId), $(orgId), $(key), $(value), $(tags), $(metadata), NOW(), NOW()
-        )
-        RETURNING *`,
-        {
-          id,
-          runId: input.runId,
-          taskId: input.taskId,
-          orgId,
-          key: input.key,
-          value: input.value as Record<string, unknown>,
-          tags: input.tags || [],
-          metadata: input.metadata || null,
-        },
+        `${sql.insert("run_data", params)} RETURNING *`,
+        params,
       );
 
       logger.info("Created/updated run data", {

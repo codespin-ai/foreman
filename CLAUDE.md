@@ -31,6 +31,24 @@ Only after reading these documents should you proceed with any implementation or
 
 This guide helps AI assistants work effectively with the Foreman codebase. For project overview, see [README.md](../README.md).
 
+## Project Context: Greenfield Development
+
+**IMPORTANT**: Foreman is a greenfield project with no legacy constraints. When working on this codebase:
+
+- **No backward compatibility concerns** - There are no existing deployments or users to migrate
+- **No legacy code patterns** - All code should follow current best practices without compromise
+- **No migration paths needed** - Database schemas, APIs, and data structures can be designed optimally from the start
+- **Write code as if starting fresh** - Every implementation should be clean and modern
+- **No change tracking in comments** - Avoid comments like "changed from X to Y" or "previously this was..." since there is no "previous" state
+- **No deprecation warnings** - Nothing is deprecated because nothing is legacy
+
+This means you should:
+
+- Focus on clean, optimal implementations without worrying about existing systems
+- Design data structures and APIs for the ideal case, not for compatibility
+- Write code and comments as if everything is being written for the first time
+- Make architectural decisions based purely on technical merit
+
 ## Core Architecture Principles
 
 ### 1. ID-Only Queue Pattern
@@ -71,6 +89,58 @@ This guide helps AI assistants work effectively with the Foreman codebase. For p
 - All imports MUST include `.js` extension: `import { foo } from "./bar.js"`
 - TypeScript configured for `"module": "NodeNext"`
 - Type: `"module"` in all package.json files
+
+### 6. SQL Helper Functions
+
+Use `sql.insert()` and `sql.update()` from `@codespin/foreman-db` for safer, more consistent SQL generation:
+
+```typescript
+import { sql } from "@codespin/foreman-db";
+
+// ✅ Good - Using sql.insert()
+const params = {
+  id: input.id,
+  org_id: input.orgId,
+  name: input.name,
+};
+await db.one(`${sql.insert("run", params)} RETURNING *`, params);
+
+// ✅ Good - Using sql.update() with WHERE clause
+const updateParams = { status: input.status };
+const query = `
+  ${sql.update("task", updateParams)}
+  WHERE id = $(taskId) AND org_id = $(orgId)
+  RETURNING *
+`;
+await db.one(query, { ...updateParams, taskId, orgId });
+```
+
+### 7. Case Conversion Pattern
+
+When working with database parameters, apply `toSnakeCase` judiciously:
+
+```typescript
+// ✅ Good - Use toSnakeCase for incoming camelCase objects
+// When you have a REST API request object
+const snakeParams = typeUtils.toSnakeCase(input); // input has camelCase properties
+
+// ✅ Good - Directly create snake_case when building from individual parameters
+const params = {
+  run_id: runId,
+  org_id: orgId,
+  created_at: new Date(),
+};
+await db.one(`${sql.insert("task", params)} RETURNING *`, params);
+
+// ❌ Unnecessary - Don't use toSnakeCase when manually constructing
+const params = typeUtils.toSnakeCase({
+  runId: runId,
+  orgId: orgId,
+});
+// Instead, write directly: { run_id: runId, org_id: orgId }
+```
+
+**Key guideline**: Use `toSnakeCase` when converting existing camelCase objects (like REST API inputs), but directly create snake_case objects when constructing from individual parameters. This is a pattern to apply based on context, not a rigid rule.
 
 ## Essential Commands
 

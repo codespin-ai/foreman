@@ -22,8 +22,8 @@ export async function listRunData(
   try {
     // Verify run exists and belongs to org
     const runCheck = await db.oneOrNone<{ id: string }>(
-      `SELECT id FROM run WHERE id = $(runId) AND org_id = $(orgId)`,
-      { runId, orgId },
+      `SELECT id FROM run WHERE id = $(run_id) AND org_id = $(org_id)`,
+      { run_id: runId, org_id: orgId },
     );
 
     if (!runCheck) {
@@ -32,9 +32,9 @@ export async function listRunData(
 
     const rows = await db.manyOrNone<RunDataDbRow>(
       `SELECT * FROM run_data 
-       WHERE run_id = $(runId)
+       WHERE run_id = $(run_id)
        ORDER BY key ASC`,
-      { runId },
+      { run_id: runId },
     );
 
     const data = rows.map(mapRunDataFromDb);

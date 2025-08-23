@@ -1,6 +1,7 @@
 import { Result, success, failure } from "@codespin/foreman-core";
 import { createLogger } from "@codespin/foreman-logger";
 import type { Database } from "@codespin/foreman-db";
+import { sql } from "@codespin/foreman-db";
 import type { Run, RunDbRow, UpdateRunInput } from "../../types.js";
 import { mapRunFromDb } from "../../mappers.js";
 
@@ -22,52 +23,66 @@ export async function updateRun(
   input: UpdateRunInput,
 ): Promise<Result<Run, Error>> {
   try {
-    const updates: string[] = [];
-    const params: Record<string, unknown> = { id, orgId };
+    const updateParams: Record<string, unknown> = {};
+    const additionalUpdates: string[] = [];
 
     if (input.status !== undefined) {
-      updates.push("status = $(status)");
-      params.status = input.status;
+      updateParams.status = input.status;
 
       // Set started_at when transitioning to running
       if (input.status === "running") {
-        updates.push("started_at = COALESCE(started_at, NOW())");
+        additionalUpdates.push("started_at = COALESCE(started_at, NOW())");
       }
 
       // Set completed_at and calculate duration when transitioning to terminal state
       if (["completed", "failed", "cancelled"].includes(input.status)) {
-        updates.push("completed_at = NOW()");
-        updates.push(
+        additionalUpdates.push("completed_at = NOW()");
+        additionalUpdates.push(
           "duration_ms = EXTRACT(EPOCH FROM (NOW() - COALESCE(started_at, created_at))) * 1000",
         );
       }
     }
 
     if (input.outputData !== undefined) {
-      updates.push("output_data = $(outputData)");
-      params.outputData = input.outputData as Record<string, unknown>;
+      updateParams.output_data = input.outputData as Record<string, unknown>;
     }
 
     if (input.errorData !== undefined) {
-      updates.push("error_data = $(errorData)");
-      params.errorData = input.errorData as Record<string, unknown>;
+      updateParams.error_data = input.errorData as Record<string, unknown>;
     }
 
     if (input.metadata !== undefined) {
-      updates.push("metadata = $(metadata)");
-      params.metadata = input.metadata as Record<string, unknown>;
+      updateParams.metadata = input.metadata as Record<string, unknown>;
     }
 
-    if (updates.length === 0) {
+    if (
+      Object.keys(updateParams).length === 0 &&
+      additionalUpdates.length === 0
+    ) {
       return failure(new Error("No fields to update"));
     }
 
+    // Build the SET clause
+    let setClause = "";
+    if (Object.keys(updateParams).length > 0) {
+      setClause = sql
+        .update("run", updateParams)
+        .replace("UPDATE run SET ", "");
+      if (additionalUpdates.length > 0) {
+        setClause += ", " + additionalUpdates.join(", ");
+      }
+    } else {
+      setClause = additionalUpdates.join(", ");
+    }
+
+    const allParams = { ...updateParams, id, org_id: orgId };
+
     const row = await db.oneOrNone<RunDbRow>(
       `UPDATE run 
-       SET ${updates.join(", ")}
-       WHERE id = $(id) AND org_id = $(orgId)
+       SET ${setClause}
+       WHERE id = $(id) AND org_id = $(org_id)
        RETURNING *`,
-      params,
+      allParams,
     );
 
     if (!row) {

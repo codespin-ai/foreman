@@ -44,8 +44,8 @@ export async function queryRunData(
   try {
     // Verify run exists and belongs to org
     const runCheck = await db.oneOrNone<{ id: string }>(
-      `SELECT id FROM run WHERE id = $(runId) AND org_id = $(orgId)`,
-      { runId, orgId },
+      `SELECT id FROM run WHERE id = $(run_id) AND org_id = $(org_id)`,
+      { run_id: runId, org_id: orgId },
     );
 
     if (!runCheck) {
@@ -53,8 +53,8 @@ export async function queryRunData(
     }
 
     // Build query conditions
-    const conditions: string[] = ["rd.run_id = $(runId)"];
-    const queryParams: Record<string, any> = { runId };
+    const conditions: string[] = ["rd.run_id = $(run_id)"];
+    const queryParams: Record<string, any> = { run_id: runId };
 
     // Key conditions (OR between different key filters)
     const keyConditions: string[] = [];
@@ -87,8 +87,8 @@ export async function queryRunData(
       const sqlPattern = params.keyPattern
         .replace(/\*/g, "%")
         .replace(/\?/g, "_");
-      keyConditions.push("rd.key LIKE $(keyPattern)");
-      queryParams.keyPattern = sqlPattern;
+      keyConditions.push("rd.key LIKE $(key_pattern)");
+      queryParams.key_pattern = sqlPattern;
     }
 
     // Combine key conditions with OR

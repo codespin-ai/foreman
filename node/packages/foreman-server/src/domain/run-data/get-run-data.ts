@@ -26,12 +26,12 @@ export async function getRunData(
       `SELECT rd.* 
        FROM run_data rd
        JOIN run r ON r.id = rd.run_id
-       WHERE rd.run_id = $(runId) 
+       WHERE rd.run_id = $(run_id) 
          AND rd.key = $(key)
-         AND r.org_id = $(orgId)
+         AND r.org_id = $(org_id)
        ORDER BY rd.created_at DESC
        LIMIT 1`,
-      { runId, key, orgId },
+      { run_id: runId, key, org_id: orgId },
     );
 
     if (!row) {

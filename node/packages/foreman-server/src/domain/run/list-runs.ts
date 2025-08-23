@@ -31,8 +31,12 @@ export async function listRuns(
     const sortOrder = params.sortOrder || "desc";
 
     // Build filter conditions
-    const conditions = ["org_id = $(orgId)"];
-    const queryParams: Record<string, unknown> = { orgId, limit, offset };
+    const conditions = ["org_id = $(org_id)"];
+    const queryParams: Record<string, unknown> = {
+      org_id: orgId,
+      limit,
+      offset,
+    };
 
     if (params.status) {
       conditions.push("status = $(status)");

@@ -224,8 +224,8 @@ router.delete("/", async (req: Request<{ runId: string }>, res) => {
          USING run r
          WHERE rd.id = $(id) 
            AND rd.run_id = r.id
-           AND r.org_id = $(orgId)`,
-        { id, orgId: req.auth!.orgId },
+           AND r.org_id = $(org_id)`,
+        { id, org_id: req.auth!.orgId },
       );
       deletedCount = result.rowCount;
     } else if (key) {
@@ -233,11 +233,11 @@ router.delete("/", async (req: Request<{ runId: string }>, res) => {
       const result = await db.result(
         `DELETE FROM run_data rd
          USING run r
-         WHERE rd.run_id = $(runId)
+         WHERE rd.run_id = $(run_id)
            AND rd.key = $(key)
            AND rd.run_id = r.id
-           AND r.org_id = $(orgId)`,
-        { runId, key, orgId: req.auth!.orgId },
+           AND r.org_id = $(org_id)`,
+        { run_id: runId, key, org_id: req.auth!.orgId },
       );
       deletedCount = result.rowCount;
     }

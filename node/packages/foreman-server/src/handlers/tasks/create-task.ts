@@ -27,7 +27,7 @@ export async function createTaskHandler(
     const input = createTaskSchema.parse(req.body);
     const ctx = createContext(req);
 
-    const result = await createTask(ctx, req.auth!.orgId, {
+    const result = await createTask(ctx, {
       runId: input.runId,
       parentTaskId: input.parentTaskId,
       type: input.type,

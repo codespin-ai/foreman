@@ -29,7 +29,7 @@ export async function listTasksHandler(
     const params = listTasksSchema.parse(req.query);
     const ctx = createContext(req);
 
-    const result = await listTasks(ctx, req.auth!.orgId, params);
+    const result = await listTasks(ctx, params);
 
     if (!result.success) {
       res.status(400).json({ error: result.error.message });

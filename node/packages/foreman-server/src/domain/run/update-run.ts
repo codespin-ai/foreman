@@ -10,16 +10,14 @@ const logger = createLogger("foreman:domain:run");
 /**
  * Update a run
  *
- * @param ctx - Data context containing database connection
+ * @param ctx - Data context containing database connection and orgId
  * @param id - Run ID
- * @param orgId - Organization ID for access control
  * @param input - Update parameters
  * @returns Result containing the updated run or an error
  */
 export async function updateRun(
   ctx: DataContext,
   id: string,
-  orgId: string,
   input: UpdateRunInput,
 ): Promise<Result<Run, Error>> {
   try {
@@ -75,12 +73,13 @@ export async function updateRun(
       setClause = additionalUpdates.join(", ");
     }
 
-    const allParams = { ...updateParams, id, org_id: orgId };
+    const allParams = { ...updateParams, id };
 
+    // RLS will handle org filtering automatically
     const row = await ctx.db.oneOrNone<RunDbRow>(
       `UPDATE run 
        SET ${setClause}
-       WHERE id = $(id) AND org_id = $(org_id)
+       WHERE id = $(id)
        RETURNING *`,
       allParams,
     );
@@ -89,11 +88,11 @@ export async function updateRun(
       return failure(new Error(`Run not found: ${id}`));
     }
 
-    logger.info("Updated run", { id, orgId, updates: Object.keys(input) });
+    logger.info("Updated run", { id, orgId: ctx.orgId, updates: Object.keys(input) });
 
     return success(mapRunFromDb(row));
   } catch (error) {
-    logger.error("Failed to update run", { error, id, orgId, input });
+    logger.error("Failed to update run", { error, id, orgId: ctx.orgId, input });
     return failure(error as Error);
   }
 }

@@ -27,7 +27,7 @@ export async function createRunDataHandler(
     const { runId } = req.params;
     const ctx = createContext(req);
 
-    const result = await createRunData(ctx, req.auth!.orgId, {
+    const result = await createRunData(ctx, {
       runId: runId!,
       key: input.key,
       value: input.value,

@@ -9,20 +9,19 @@ const logger = createLogger("foreman:domain:run");
 /**
  * Get a run by ID
  *
- * @param ctx - Data context containing database connection
+ * @param ctx - Data context containing database connection and orgId
  * @param id - Run ID
- * @param orgId - Organization ID for access control
  * @returns Result containing the run or an error
  */
 export async function getRun(
   ctx: DataContext,
   id: string,
-  orgId: string,
 ): Promise<Result<Run, Error>> {
   try {
+    // RLS will handle org filtering automatically
     const row = await ctx.db.oneOrNone<RunDbRow>(
-      `SELECT * FROM run WHERE id = $(id) AND org_id = $(org_id)`,
-      { id, org_id: orgId },
+      `SELECT * FROM run WHERE id = $(id)`,
+      { id },
     );
 
     if (!row) {
@@ -31,7 +30,7 @@ export async function getRun(
 
     return success(mapRunFromDb(row));
   } catch (error) {
-    logger.error("Failed to get run", { error, id, orgId });
+    logger.error("Failed to get run", { error, id, orgId: ctx.orgId });
     return failure(error as Error);
   }
 }

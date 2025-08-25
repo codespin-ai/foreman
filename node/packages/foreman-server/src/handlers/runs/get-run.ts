@@ -14,7 +14,7 @@ export async function getRunHandler(
 ): Promise<void> {
   try {
     const ctx = createContext(req);
-    const result = await getRun(ctx, req.params.id!, req.auth!.orgId);
+    const result = await getRun(ctx, req.params.id!);
 
     if (!result.success) {
       res.status(404).json({ error: result.error.message });

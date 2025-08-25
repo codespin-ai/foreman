@@ -14,14 +14,12 @@ const logger = createLogger("foreman:domain:task");
 /**
  * List tasks with pagination and filtering
  *
- * @param ctx - Data context containing database connection
- * @param orgId - Organization ID for access control
+ * @param ctx - Data context containing database connection and orgId
  * @param params - Pagination and filter parameters
  * @returns Result containing paginated tasks or an error
  */
 export async function listTasks(
   ctx: DataContext,
-  orgId: string,
   params: PaginationParams & { runId?: string; status?: string },
 ): Promise<Result<PaginatedResult<Task>, Error>> {
   try {
@@ -30,10 +28,9 @@ export async function listTasks(
     const sortBy = params.sortBy || "created_at";
     const sortOrder = params.sortOrder || "desc";
 
-    // Build filter conditions
-    const conditions = ["org_id = $(org_id)"];
+    // Build filter conditions - RLS will handle org filtering
+    const conditions: string[] = [];
     const queryParams: Record<string, unknown> = {
-      org_id: orgId,
       limit,
       offset,
     };
@@ -48,9 +45,11 @@ export async function listTasks(
       queryParams.status = params.status;
     }
 
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
     // Get total count
     const countResult = await ctx.db.one<{ count: string }>(
-      `SELECT COUNT(*) as count FROM task WHERE ${conditions.join(" AND ")}`,
+      `SELECT COUNT(*) as count FROM task ${whereClause}`,
       queryParams,
     );
     const total = parseInt(countResult.count);
@@ -58,7 +57,7 @@ export async function listTasks(
     // Get paginated results
     const rows = await ctx.db.manyOrNone<TaskDbRow>(
       `SELECT * FROM task 
-       WHERE ${conditions.join(" AND ")}
+       ${whereClause}
        ORDER BY ${sortBy} ${sortOrder}
        LIMIT $(limit) OFFSET $(offset)`,
       queryParams,
@@ -73,7 +72,7 @@ export async function listTasks(
       offset,
     });
   } catch (error) {
-    logger.error("Failed to list tasks", { error, orgId, params });
+    logger.error("Failed to list tasks", { error, orgId: ctx.orgId, params });
     return failure(error as Error);
   }
 }

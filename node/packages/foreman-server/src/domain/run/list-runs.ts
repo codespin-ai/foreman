@@ -14,14 +14,12 @@ const logger = createLogger("foreman:domain:run");
 /**
  * List runs with pagination and filtering
  *
- * @param ctx - Data context containing database connection
- * @param orgId - Organization ID for access control
+ * @param ctx - Data context containing database connection and orgId
  * @param params - Pagination and filter parameters
  * @returns Result containing paginated runs or an error
  */
 export async function listRuns(
   ctx: DataContext,
-  orgId: string,
   params: PaginationParams & { status?: string },
 ): Promise<Result<PaginatedResult<Run>, Error>> {
   try {
@@ -30,10 +28,9 @@ export async function listRuns(
     const sortBy = params.sortBy || "created_at";
     const sortOrder = params.sortOrder || "desc";
 
-    // Build filter conditions
-    const conditions = ["org_id = $(org_id)"];
+    // Build filter conditions - RLS will handle org filtering
+    const conditions: string[] = [];
     const queryParams: Record<string, unknown> = {
-      org_id: orgId,
       limit,
       offset,
     };
@@ -43,9 +40,11 @@ export async function listRuns(
       queryParams.status = params.status;
     }
 
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
     // Get total count
     const countResult = await ctx.db.one<{ count: string }>(
-      `SELECT COUNT(*) as count FROM run WHERE ${conditions.join(" AND ")}`,
+      `SELECT COUNT(*) as count FROM run ${whereClause}`,
       queryParams,
     );
     const total = parseInt(countResult.count);
@@ -53,7 +52,7 @@ export async function listRuns(
     // Get paginated results
     const rows = await ctx.db.manyOrNone<RunDbRow>(
       `SELECT * FROM run 
-       WHERE ${conditions.join(" AND ")}
+       ${whereClause}
        ORDER BY ${sortBy} ${sortOrder}
        LIMIT $(limit) OFFSET $(offset)`,
       queryParams,
@@ -68,7 +67,7 @@ export async function listRuns(
       offset,
     });
   } catch (error) {
-    logger.error("Failed to list runs", { error, orgId, params });
+    logger.error("Failed to list runs", { error, orgId: ctx.orgId, params });
     return failure(error as Error);
   }
 }

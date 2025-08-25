@@ -14,7 +14,7 @@ export async function getTaskHandler(
 ): Promise<void> {
   try {
     const ctx = createContext(req);
-    const result = await getTask(ctx, req.params.id!, req.auth!.orgId);
+    const result = await getTask(ctx, req.params.id!);
 
     if (!result.success) {
       res.status(404).json({ error: result.error.message });

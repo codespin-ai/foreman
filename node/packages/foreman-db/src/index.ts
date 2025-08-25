@@ -1,80 +1,112 @@
 import pgPromise from "pg-promise";
-import type { IDatabase } from "pg-promise";
-import { createLogger } from "@codespin/foreman-logger";
+import { RlsDatabaseWrapper } from "./rls-wrapper.js";
 export * as sql from "./sql.js";
+export { createLazyDb } from "./lazy-db.js";
 
-const logger = createLogger("foreman-db");
+const pgp = pgPromise();
 
-// Initialize pg-promise
-const pgp = pgPromise({
-  // Initialization options
-  error(error: Error, e: { query?: unknown; params?: unknown }): void {
-    if (e.query) {
-      logger.error("Database query error", {
-        error: error.message,
-        query: e.query,
-        params: e.params,
-      });
-    }
-  },
-});
+// Export the Database interface - this is what all consumers use
+export interface Database {
+  query: <T = any>(query: string, values?: any) => Promise<T[]>;
+  one: <T = any>(query: string, values?: any) => Promise<T>;
+  oneOrNone: <T = any>(query: string, values?: any) => Promise<T | null>;
+  none: (query: string, values?: any) => Promise<null>;
+  many: <T = any>(query: string, values?: any) => Promise<T[]>;
+  manyOrNone: <T = any>(query: string, values?: any) => Promise<T[]>;
+  any: <T = any>(query: string, values?: any) => Promise<T[]>;
+  result: (query: string, values?: any) => Promise<pgPromise.IResultExt>;
+  tx: <T>(callback: (t: Database) => Promise<T>) => Promise<T>;
 
-// Database connection type
-export type Database = IDatabase<Record<string, never>>;
+  // Optional method for upgrading to ROOT access
+  // Only available on RLS databases, not on already-unrestricted databases
+  upgradeToRoot?: (reason?: string) => Database;
 
-// Connection configuration
-interface DbConfig {
-  host: string;
-  port: number;
-  database: string;
-  user: string;
-  password: string;
-  ssl?: boolean;
+  // pg-promise specific
+  $pool: any;
 }
 
-// Connection pool
-let db: Database | null = null;
+// Single shared connection pool for all database connections
+// This prevents connection pool exhaustion by ensuring only one pool exists
+const connectionPools = new Map<string, pgPromise.IDatabase<any>>();
 
-/**
- * Get or create database connection
- *
- * @returns Database connection instance
- */
-export function getDb(): Database {
-  if (!db) {
-    const config: DbConfig = {
+function getConnectionKey(user: string): string {
+  const host = process.env.FOREMAN_DB_HOST || "localhost";
+  const port = process.env.FOREMAN_DB_PORT || "5432";
+  const database = process.env.FOREMAN_DB_NAME || "foreman";
+  return `${host}:${port}:${database}:${user}`;
+}
+
+function getOrCreateConnection(
+  user: string,
+  password: string,
+): pgPromise.IDatabase<any> {
+  const key = getConnectionKey(user);
+
+  if (!connectionPools.has(key)) {
+    const config = {
       host: process.env.FOREMAN_DB_HOST || "localhost",
-      port: parseInt(process.env.FOREMAN_DB_PORT || "5432"),
+      port: process.env.FOREMAN_DB_PORT
+        ? parseInt(process.env.FOREMAN_DB_PORT, 10)
+        : 5432,
       database: process.env.FOREMAN_DB_NAME || "foreman",
-      user: process.env.FOREMAN_DB_USER || "foreman",
-      password: process.env.FOREMAN_DB_PASSWORD || "foreman",
-      ssl: process.env.FOREMAN_DB_SSL === "true",
+      user,
+      password,
+      // Optimize pool settings to prevent exhaustion
+      max: 20, // Maximum pool size
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
     };
 
-    logger.info("Connecting to database", {
-      host: config.host,
-      port: config.port,
-      database: config.database,
-      user: config.user,
-    });
-
-    db = pgp(config);
+    connectionPools.set(key, pgp(config));
+  } else {
+    // Connection pool already exists, will be reused
   }
 
-  return db;
+  return connectionPools.get(key)!;
 }
 
-/**
- * Close database connection
- */
+// Create RLS-enabled database connection
+export function createRlsDb(orgId: string): Database {
+  if (!orgId) {
+    throw new Error("Organization ID is required for RLS database");
+  }
+
+  const user = process.env.RLS_DB_USER || "rls_db_user";
+  const password = process.env.RLS_DB_USER_PASSWORD || "";
+
+  if (!password) {
+    throw new Error("RLS_DB_USER_PASSWORD environment variable is required");
+  }
+
+  const connection = getOrCreateConnection(user, password);
+  return new RlsDatabaseWrapper(connection, orgId);
+}
+
+// Create unrestricted database connection (for migrations, admin tasks, ROOT org)
+export function createUnrestrictedDb(): Database {
+  const user = process.env.UNRESTRICTED_DB_USER || "unrestricted_db_user";
+  const password = process.env.UNRESTRICTED_DB_USER_PASSWORD || "";
+
+  if (!password) {
+    throw new Error(
+      "UNRESTRICTED_DB_USER_PASSWORD environment variable is required",
+    );
+  }
+
+  return getOrCreateConnection(user, password) as Database;
+}
+
+// Legacy function for backward compatibility - will be removed later
+// For now, returns unrestricted database for existing code
+export function getDb(): Database {
+  return createUnrestrictedDb();
+}
+
+// Legacy function for backward compatibility
 export async function closeDb(): Promise<void> {
-  if (db) {
-    await db.$pool.end();
-    db = null;
-    logger.info("Database connection closed");
+  // Close all connection pools
+  for (const [key, pool] of connectionPools) {
+    await pool.$pool.end();
+    connectionPools.delete(key);
   }
 }
-
-// Re-export pg-promise types that are commonly used
-export { pgPromise };
-export type { IDatabase } from "pg-promise";

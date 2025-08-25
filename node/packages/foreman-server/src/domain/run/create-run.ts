@@ -11,7 +11,7 @@ const logger = createLogger("foreman:domain:run");
 /**
  * Create a new run
  *
- * @param ctx - Data context containing database connection
+ * @param ctx - Data context containing database connection and orgId
  * @param input - Run creation parameters
  * @returns Result containing the created run or an error
  */
@@ -20,11 +20,15 @@ export async function createRun(
   input: CreateRunInput,
 ): Promise<Result<Run, Error>> {
   try {
+    if (!ctx.orgId) {
+      throw new Error("Organization ID is required to create a run");
+    }
+
     const id = uuidv4();
 
     const params = {
       id,
-      org_id: input.orgId,
+      org_id: ctx.orgId,
       status: "pending",
       input_data: input.inputData as Record<string, unknown>,
       metadata: input.metadata || null,
@@ -36,7 +40,7 @@ export async function createRun(
       params,
     );
 
-    logger.info("Created run", { id, orgId: input.orgId });
+    logger.info("Created run", { id, orgId: ctx.orgId });
 
     return success(mapRunFromDb(row));
   } catch (error) {

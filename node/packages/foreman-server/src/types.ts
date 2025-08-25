@@ -135,7 +135,6 @@ export type RunDataDbRow = {
 
 // API request/response types
 export type CreateRunInput = {
-  orgId: string;
   inputData: unknown;
   metadata?: Record<string, unknown>;
 };

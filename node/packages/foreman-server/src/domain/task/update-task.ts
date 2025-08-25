@@ -10,16 +10,14 @@ const logger = createLogger("foreman:domain:task");
 /**
  * Update a task
  *
- * @param ctx - Data context containing database connection
+ * @param ctx - Data context containing database connection and orgId
  * @param id - Task ID
- * @param orgId - Organization ID for access control
  * @param input - Update parameters
  * @returns Result containing the updated task or an error
  */
 export async function updateTask(
   ctx: DataContext,
   id: string,
-  orgId: string,
   input: UpdateTaskInput,
 ): Promise<Result<Task, Error>> {
   try {
@@ -77,10 +75,10 @@ export async function updateTask(
         return failure(new Error("No fields to update"));
       }
 
-      // Get current task to check run_id
+      // Get current task to check run_id - RLS will handle org filtering
       const currentTask = await t.oneOrNone<{ run_id: string; status: string }>(
-        `SELECT run_id, status FROM task WHERE id = $(id) AND org_id = $(org_id)`,
-        { id, org_id: orgId },
+        `SELECT run_id, status FROM task WHERE id = $(id)`,
+        { id },
       );
 
       if (!currentTask) {
@@ -100,12 +98,13 @@ export async function updateTask(
         setClause = additionalUpdates.join(", ");
       }
 
-      const allParams = { ...updateParams, id, org_id: orgId };
+      const allParams = { ...updateParams, id };
 
+      // RLS will handle org filtering automatically
       const row = await t.one<TaskDbRow>(
         `UPDATE task 
          SET ${setClause}
-         WHERE id = $(id) AND org_id = $(org_id)
+         WHERE id = $(id)
          RETURNING *`,
         allParams,
       );
@@ -129,12 +128,12 @@ export async function updateTask(
         }
       }
 
-      logger.info("Updated task", { id, orgId, updates: Object.keys(input) });
+      logger.info("Updated task", { id, orgId: ctx.orgId, updates: Object.keys(input) });
 
       return success(mapTaskFromDb(row));
     });
   } catch (error) {
-    logger.error("Failed to update task", { error, id, orgId, input });
+    logger.error("Failed to update task", { error, id, orgId: ctx.orgId, input });
     return failure(error as Error);
   }
 }

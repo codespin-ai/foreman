@@ -11,35 +11,36 @@ const logger = createLogger("foreman:domain:run-data");
 /**
  * Create or update run data
  *
- * @param ctx - Data context containing database connection
- * @param orgId - Organization ID
+ * @param ctx - Data context containing database connection and orgId
  * @param input - Run data creation parameters
  * @returns Result containing the created/updated run data or an error
  */
 export async function createRunData(
   ctx: DataContext,
-  orgId: string,
   input: CreateRunDataInput,
 ): Promise<Result<RunData, Error>> {
   try {
+    if (!ctx.orgId) {
+      throw new Error("Organization ID is required to create run data");
+    }
+
     return await ctx.db.tx(async (t) => {
-      // Verify run exists and belongs to org
+      // Verify run exists - RLS will handle org filtering
       const runCheck = await t.oneOrNone<{ id: string }>(
-        `SELECT id FROM run WHERE id = $(run_id) AND org_id = $(org_id)`,
-        { run_id: input.runId, org_id: orgId },
+        `SELECT id FROM run WHERE id = $(run_id)`,
+        { run_id: input.runId },
       );
 
       if (!runCheck) {
         return failure(new Error(`Run not found: ${input.runId}`));
       }
 
-      // Verify task exists and belongs to the run
+      // Verify task exists and belongs to the run - RLS will handle org filtering
       const taskCheck = await t.oneOrNone<{ id: string }>(
         `SELECT id FROM task 
          WHERE id = $(task_id) 
-           AND run_id = $(run_id) 
-           AND org_id = $(org_id)`,
-        { task_id: input.taskId, run_id: input.runId, org_id: orgId },
+           AND run_id = $(run_id)`,
+        { task_id: input.taskId, run_id: input.runId },
       );
 
       if (!taskCheck) {
@@ -53,7 +54,7 @@ export async function createRunData(
         id,
         run_id: input.runId,
         task_id: input.taskId,
-        org_id: orgId,
+        org_id: ctx.orgId,
         key: input.key,
         value: input.value as Record<string, unknown>,
         tags: input.tags || [],
@@ -76,7 +77,7 @@ export async function createRunData(
       return success(mapRunDataFromDb(row));
     });
   } catch (error) {
-    logger.error("Failed to create run data", { error, orgId, input });
+    logger.error("Failed to create run data", { error, orgId: ctx.orgId, input });
     return failure(error as Error);
   }
 }

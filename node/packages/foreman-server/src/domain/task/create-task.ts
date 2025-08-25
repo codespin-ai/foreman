@@ -11,22 +11,25 @@ const logger = createLogger("foreman:domain:task");
 /**
  * Create a new task
  *
- * @param ctx - Data context containing database connection
- * @param orgId - Organization ID
+ * @param ctx - Data context containing database connection and orgId
  * @param input - Task creation parameters
  * @returns Result containing the created task or an error
  */
 export async function createTask(
   ctx: DataContext,
-  orgId: string,
   input: CreateTaskInput,
 ): Promise<Result<Task, Error>> {
   try {
+    if (!ctx.orgId) {
+      throw new Error("Organization ID is required to create a task");
+    }
+
     return await ctx.db.tx(async (t) => {
-      // Verify run exists and belongs to org
+      // With RLS, we don't need explicit org_id checks
+      // The policies will automatically filter by organization
       const runCheck = await t.oneOrNone<{ id: string }>(
-        `SELECT id FROM run WHERE id = $(run_id) AND org_id = $(org_id)`,
-        { run_id: input.runId, org_id: orgId },
+        `SELECT id FROM run WHERE id = $(run_id)`,
+        { run_id: input.runId },
       );
 
       if (!runCheck) {
@@ -36,11 +39,10 @@ export async function createTask(
       // Verify parent task if provided
       if (input.parentTaskId) {
         const parentCheck = await t.oneOrNone<{ id: string }>(
-          `SELECT id FROM task WHERE id = $(parent_task_id) AND run_id = $(run_id) AND org_id = $(org_id)`,
+          `SELECT id FROM task WHERE id = $(parent_task_id) AND run_id = $(run_id)`,
           {
             parent_task_id: input.parentTaskId,
             run_id: input.runId,
-            org_id: orgId,
           },
         );
 
@@ -58,7 +60,7 @@ export async function createTask(
         id,
         run_id: input.runId,
         parent_task_id: input.parentTaskId || null,
-        org_id: orgId,
+        org_id: ctx.orgId,
         type: input.type,
         status: "pending",
         input_data: input.inputData as Record<string, unknown>,
@@ -83,7 +85,7 @@ export async function createTask(
       return success(mapTaskFromDb(row));
     });
   } catch (error) {
-    logger.error("Failed to create task", { error, orgId, input });
+    logger.error("Failed to create task", { error, orgId: ctx.orgId, input });
     return failure(error as Error);
   }
 }

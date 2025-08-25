@@ -28,7 +28,7 @@ export async function listRunsHandler(
     const params = listRunsSchema.parse(req.query);
     const ctx = createContext(req);
 
-    const result = await listRuns(ctx, req.auth!.orgId, params);
+    const result = await listRuns(ctx, params);
 
     if (!result.success) {
       res.status(400).json({ error: result.error.message });

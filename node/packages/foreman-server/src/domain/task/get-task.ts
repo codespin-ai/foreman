@@ -9,20 +9,19 @@ const logger = createLogger("foreman:domain:task");
 /**
  * Get a task by ID
  *
- * @param ctx - Data context containing database connection
+ * @param ctx - Data context containing database connection and orgId
  * @param id - Task ID
- * @param orgId - Organization ID for access control
  * @returns Result containing the task or an error
  */
 export async function getTask(
   ctx: DataContext,
   id: string,
-  orgId: string,
 ): Promise<Result<Task, Error>> {
   try {
+    // RLS will handle org filtering automatically
     const row = await ctx.db.oneOrNone<TaskDbRow>(
-      `SELECT * FROM task WHERE id = $(id) AND org_id = $(org_id)`,
-      { id, org_id: orgId },
+      `SELECT * FROM task WHERE id = $(id)`,
+      { id },
     );
 
     if (!row) {
@@ -31,7 +30,7 @@ export async function getTask(
 
     return success(mapTaskFromDb(row));
   } catch (error) {
-    logger.error("Failed to get task", { error, id, orgId });
+    logger.error("Failed to get task", { error, id, orgId: ctx.orgId });
     return failure(error as Error);
   }
 }

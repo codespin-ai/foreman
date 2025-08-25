@@ -24,7 +24,6 @@ export async function createRunHandler(
     const ctx = createContext(req);
 
     const result = await createRun(ctx, {
-      orgId: req.auth!.orgId,
       inputData: input.inputData,
       metadata: input.metadata,
     });

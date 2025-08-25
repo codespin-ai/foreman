@@ -16,7 +16,7 @@ COPY node/packages/foreman-server/package*.json ./node/packages/foreman-server/
 COPY node/packages/foreman-client/package*.json ./node/packages/foreman-client/
 
 # Copy build scripts
-COPY build.sh clean.sh ./
+COPY build.sh clean.sh format-all.sh ./
 
 # Copy TypeScript config
 COPY tsconfig.base.json ./
@@ -27,7 +27,7 @@ COPY node ./node
 COPY database ./database
 
 # Install dependencies and build
-RUN chmod +x build.sh clean.sh && \
+RUN chmod +x build.sh clean.sh format-all.sh && \
     ./build.sh --install
 
 # Runtime stage - Ubuntu minimal

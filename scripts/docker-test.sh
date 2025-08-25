@@ -179,6 +179,10 @@ docker run -d --rm \
     -e FOREMAN_DB_NAME=$TEST_DB_NAME \
     -e FOREMAN_DB_USER=postgres \
     -e FOREMAN_DB_PASSWORD=postgres \
+    -e UNRESTRICTED_DB_USER=unrestricted_db_user \
+    -e UNRESTRICTED_DB_USER_PASSWORD=changeme_admin_password \
+    -e RLS_DB_USER=rls_db_user \
+    -e RLS_DB_USER_PASSWORD=changeme_rls_password \
     -e FOREMAN_AUTO_MIGRATE=true \
     -e JWT_SECRET=test-secret-key \
     -e LOG_LEVEL=error \
@@ -242,6 +246,7 @@ RUN_JSON='{
 
 RESPONSE=$(curl -s -X POST http://localhost:$TEST_PORT/api/v1/runs \
     -H "Content-Type: application/json" \
+    -H "x-org-id: test-org" \
     -d "$RUN_JSON" 2>/dev/null)
 
 if echo "$RESPONSE" | grep -q "\"id\":"; then
@@ -292,6 +297,7 @@ if [ -n "$RUN_ID" ]; then
     
     TASK_RESPONSE=$(curl -s -X POST http://localhost:$TEST_PORT/api/v1/tasks \
         -H "Content-Type: application/json" \
+        -H "x-org-id: test-org" \
         -d "$TASK_JSON" 2>/dev/null)
     
     if echo "$TASK_RESPONSE" | grep -q "\"id\":"; then

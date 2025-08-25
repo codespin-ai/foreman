@@ -432,7 +432,9 @@ describe("Foreman Client API", () => {
       expect(result.success).to.be.false;
       if (!result.success) {
         expect(result.error).to.be.instanceOf(Error);
-        expect(result.error.message).to.include("API key required");
+        expect(result.error.message).to.include(
+          "Missing or invalid authorization header",
+        );
       }
     });
 

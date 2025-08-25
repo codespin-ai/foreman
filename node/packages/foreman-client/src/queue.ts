@@ -26,7 +26,7 @@ async function getQueue(
 ): Promise<Queue> {
   const cacheKey = `${queueName}:${redisConfig.host}:${redisConfig.port}`;
 
-  let queue = queueCache.get(cacheKey);
+  const queue = queueCache.get(cacheKey);
   if (!queue) {
     const connection = {
       host: redisConfig.host,
@@ -35,12 +35,13 @@ async function getQueue(
       db: redisConfig.db,
     };
 
-    queue = new Queue(queueName, { connection });
-    queueCache.set(cacheKey, queue);
+    const newQueue = new Queue(queueName, { connection });
+    queueCache.set(cacheKey, newQueue);
     logger.debug("Created new queue instance", {
       queueName,
       host: redisConfig.host,
     });
+    return newQueue;
   }
 
   return queue;

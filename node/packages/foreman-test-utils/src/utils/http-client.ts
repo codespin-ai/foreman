@@ -25,14 +25,15 @@ export class TestHttpClient {
 
   private async parseResponse<T>(response: Response): Promise<HttpResponse<T>> {
     const text = await response.text();
-    let data: T;
 
     // Try to parse as JSON, otherwise return text
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = text as any;
-    }
+    const data: T = (() => {
+      try {
+        return JSON.parse(text);
+      } catch {
+        return text as any;
+      }
+    })();
 
     // Convert headers to plain object
     const headers: Record<string, string> = {};

@@ -600,20 +600,20 @@ describe("Queue and Worker Functions", () => {
       }
 
       // Verify tasks are in queue
-      let jobs = await testQueue.getJobs(["waiting"]);
+      const jobs = await testQueue.getJobs(["waiting"]);
       expect(jobs).to.have.lengthOf(5);
 
       // Clean queue
       await testQueue.obliterate({ force: true });
 
       // Verify queue is empty
-      jobs = await testQueue.getJobs([
+      const emptyJobs = await testQueue.getJobs([
         "waiting",
         "active",
         "completed",
         "failed",
       ]);
-      expect(jobs).to.have.lengthOf(0);
+      expect(emptyJobs).to.have.lengthOf(0);
     });
 
     it("should support multiple queue instances", async () => {

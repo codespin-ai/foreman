@@ -61,17 +61,13 @@ export async function updateRun(
     }
 
     // Build the SET clause
-    let setClause = "";
-    if (Object.keys(updateParams).length > 0) {
-      setClause = sql
-        .update("run", updateParams)
-        .replace("UPDATE run SET ", "");
-      if (additionalUpdates.length > 0) {
-        setClause += ", " + additionalUpdates.join(", ");
-      }
-    } else {
-      setClause = additionalUpdates.join(", ");
-    }
+    const setClause =
+      Object.keys(updateParams).length > 0
+        ? sql.update("run", updateParams).replace("UPDATE run SET ", "") +
+          (additionalUpdates.length > 0
+            ? ", " + additionalUpdates.join(", ")
+            : "")
+        : additionalUpdates.join(", ");
 
     const allParams = { ...updateParams, id };
 

@@ -32,8 +32,8 @@ function buildHeaders(config: ForemanConfig): Record<string, string> {
     headers["x-org-id"] = config.orgId;
   }
 
-  if (config.apiKey) {
-    headers.Authorization = `Bearer ${config.apiKey}`;
+  if (config.bearerToken) {
+    headers.Authorization = `Bearer ${config.bearerToken}`;
   }
 
   return headers;

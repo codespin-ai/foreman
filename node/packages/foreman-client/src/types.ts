@@ -13,8 +13,8 @@ export type ForemanConfig = {
   endpoint: string;
   /** Organization ID for multi-tenant isolation (optional for ROOT context) */
   orgId?: string;
-  /** Optional API key for authentication */
-  apiKey?: string;
+  /** Optional Bearer token for authentication */
+  bearerToken?: string;
   timeout?: number;
   queues?: {
     taskQueue?: string;

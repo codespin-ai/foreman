@@ -13,10 +13,10 @@ declare module "express-serve-static-core" {
 }
 
 /**
- * Simple API Key authentication middleware for full-trust environment
+ * Simple Bearer token authentication middleware for full-trust environment
  *
  * Since Foreman is behind a firewall with full trust, this is a simplified
- * authentication that only validates the API key format and extracts org info.
+ * authentication that only validates the Bearer token format and extracts org info.
  */
 export async function authenticate(
   req: Request,
@@ -38,49 +38,47 @@ export async function authenticate(
       return;
     }
 
-    // Check for API key in x-api-key header or Authorization header
-    let apiKey = req.headers["x-api-key"] as string;
+    // Check for Bearer token in Authorization header
+    const authHeader = req.headers.authorization;
 
-    if (!apiKey) {
-      const authHeader = req.headers.authorization;
-
-      if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        res
-          .status(401)
-          .json({ error: "Missing or invalid authorization header" });
-        return;
-      }
-
-      apiKey = authHeader.substring(7); // Remove 'Bearer ' prefix
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      res
+        .status(401)
+        .json({ error: "Missing or invalid authorization header" });
+      return;
     }
 
-    if (!apiKey) {
-      res.status(401).json({ error: "API key required but not provided" });
+    const bearerToken = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    if (!bearerToken) {
+      res.status(401).json({ error: "Bearer token required but not provided" });
       return;
     }
 
     // If FOREMAN_API_KEY is set, validate against it (for test environments)
     if (process.env.FOREMAN_API_KEY) {
-      // In test mode, accept either the exact test key or properly formatted keys
-      if (apiKey === process.env.FOREMAN_API_KEY) {
-        // For test API key, just validate
+      // In test mode, accept the exact test token
+      if (bearerToken === process.env.FOREMAN_API_KEY) {
+        // For test Bearer token, just validate
         req.auth = {
-          apiKeyId: "test-key-id",
+          apiKeyId: "test-token-id",
         };
         next();
         return;
       }
-      // Continue to format validation below
+      // If token doesn't match, reject
+      res.status(401).json({ error: "Invalid bearer token" });
+      return;
     }
 
-    // Simple validation - in a full-trust environment, we just check the key exists
+    // Simple validation - in a full-trust environment, we just check the token exists
     // No specific format required, no database lookup or bcrypt verification needed
-    // The org context comes from x-org-id header, not from the API key
+    // The org context comes from x-org-id header, not from the Bearer token
     req.auth = {
-      apiKeyId: apiKey.substring(0, 16), // Use first 16 chars as ID
+      apiKeyId: bearerToken.substring(0, 16), // Use first 16 chars as ID
     };
 
-    logger.debug("API key authenticated", {
+    logger.debug("Bearer token authenticated", {
       apiKeyId: req.auth.apiKeyId,
       ip: req.ip || req.socket.remoteAddress,
     });

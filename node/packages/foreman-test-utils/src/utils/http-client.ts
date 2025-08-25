@@ -15,8 +15,8 @@ export class TestHttpClient {
     this.baseUrl = baseUrl;
     this.defaultHeaders = {
       "Content-Type": "application/json",
-      // Default test API key
-      "x-api-key": "test-api-key",
+      // Default test Bearer token
+      Authorization: "Bearer test-token",
       // Default test org (same as Permiso pattern)
       "x-org-id": "test-org",
       ...options?.headers,
@@ -117,7 +117,7 @@ export class TestHttpClient {
 
   // Convenience methods for testing
   setApiKey(apiKey: string): void {
-    this.defaultHeaders["x-api-key"] = apiKey;
+    this.defaultHeaders["Authorization"] = `Bearer ${apiKey}`;
   }
 
   setOrgId(orgId: string | undefined): void {

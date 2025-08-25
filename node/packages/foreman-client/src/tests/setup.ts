@@ -20,7 +20,7 @@ export const client = new TestHttpClient(`http://localhost:5003`);
 export const getTestConfig = () => ({
   endpoint: "http://localhost:5003",
   orgId: "test-org",
-  apiKey: "test-api-key",
+  apiKey: "test-token",
   timeout: 30000,
 });
 

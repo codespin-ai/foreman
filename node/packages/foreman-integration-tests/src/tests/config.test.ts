@@ -70,65 +70,45 @@ describe("Config API", () => {
 
   describe("Authentication", () => {
     it("should require authentication for config endpoints", async () => {
-      // Create client without API key
-      const unauthenticatedClient = client;
-      unauthenticatedClient.removeHeader("x-api-key");
-      unauthenticatedClient.removeHeader("Authorization");
-
-      const response = await unauthenticatedClient.get("/api/v1/config");
+      // Make request without Bearer token
+      const response = await client.get("/api/v1/config", {
+        Authorization: "", // Override with empty auth header
+      });
 
       expect(response.status).to.equal(401);
       expect(response.data).to.have.property("error");
-
-      // Restore API key for other tests
-      unauthenticatedClient.setApiKey("test-api-key");
     });
 
-    it("should work with valid API key header", async () => {
+    it("should work with valid Bearer token", async () => {
       const response = await client.get("/api/v1/config", {
-        "x-api-key": "test-api-key",
+        Authorization: "Bearer test-token",
       });
 
       expect(response.status).to.equal(200);
       expect(response.data).to.have.property("redis");
     });
 
-    it("should work with valid Authorization header", async () => {
+    it("should reject invalid Bearer tokens", async () => {
       const response = await client.get("/api/v1/config", {
-        Authorization: "Bearer test-api-key",
+        Authorization: "Bearer wrong-token",
       });
 
-      expect(response.status).to.equal(200);
-      expect(response.data).to.have.property("redis");
-    });
-
-    // Format validation removed - any non-empty key is valid in full-trust mode
-    it("should accept any API key format in full-trust mode", async () => {
-      const response = await client.get("/api/v1/config", {
-        "x-api-key": "any-key-format-works",
-      });
-
-      expect(response.status).to.equal(200);
-      expect(response.data).to.have.property("redis");
+      expect(response.status).to.equal(401);
+      expect(response.data).to.have.property("error", "Invalid Bearer token");
     });
   });
 
   describe("Health Check", () => {
     it("should return health status without authentication", async () => {
-      // Remove auth headers
-      const unauthenticatedClient = client;
-      unauthenticatedClient.removeHeader("x-api-key");
-      unauthenticatedClient.removeHeader("Authorization");
-
-      const response = await unauthenticatedClient.get("/health");
+      // Make request without Bearer token
+      const response = await client.get("/health", {
+        Authorization: "", // Override with empty auth header
+      });
 
       expect(response.status).to.equal(200);
       expect(response.data).to.have.property("status", "healthy");
       expect(response.data).to.have.property("timestamp");
       expect(response.data).to.have.property("environment", "test");
-
-      // Restore API key for other tests
-      unauthenticatedClient.setApiKey("test-api-key");
     });
   });
 

@@ -44,12 +44,12 @@ Foreman uses environment variables for configuration. Most have sensible default
 
 ### Authentication Configuration
 
-| Variable                  | Description                   | Default                  |
-| ------------------------- | ----------------------------- | ------------------------ |
-| `FOREMAN_API_KEY`         | Default API key for testing   | -                        |
-| `FOREMAN_API_KEY_ENABLED` | Enable API key authentication | `true` if API key is set |
+| Variable                  | Description                     | Default                |
+| ------------------------- | ------------------------------- | ---------------------- |
+| `FOREMAN_API_KEY`         | Bearer token for authentication | -                      |
+| `FOREMAN_API_KEY_ENABLED` | Enable Bearer authentication    | `true` if token is set |
 
-**Note**: In production, always use proper API keys. The format is: `fmn_[environment]_[organizationId]_[random]`
+**Note**: In production, always use secure Bearer tokens.
 
 ### Rate Limiting
 
@@ -84,8 +84,8 @@ export REDIS_PORT=6379
 export PORT=3000
 export LOG_LEVEL=debug
 
-# Test API key
-export FOREMAN_API_KEY=fmn_dev_testorg_123
+# Bearer token
+export FOREMAN_API_KEY=your-secret-token
 ```
 
 ### Production Environment
@@ -154,7 +154,7 @@ The foreman-client library uses these environment variables as defaults:
 | Variable           | Description                             |
 | ------------------ | --------------------------------------- |
 | `FOREMAN_ENDPOINT` | Default Foreman server URL              |
-| `FOREMAN_API_KEY`  | Default API key for authentication      |
+| `FOREMAN_API_KEY`  | Bearer token for authentication         |
 | `FOREMAN_TIMEOUT`  | Default request timeout in milliseconds |
 
 ## Configuration Validation
@@ -163,12 +163,12 @@ The server validates configuration on startup:
 
 - Required database configuration must be present
 - Redis configuration is validated when Redis features are used
-- API key format is validated if authentication is enabled
+- Bearer token is validated if authentication is enabled
 
 ## Security Notes
 
 1. **Never commit secrets** - Use environment variables or secret management systems
-2. **Rotate API keys regularly** - Generate new keys periodically
+2. **Rotate tokens regularly** - Generate new tokens periodically
 3. **Use SSL in production** - Enable `FOREMAN_DB_SSL` for database connections
 4. **Restrict CORS origins** - Don"t use `*` in production
 5. **Enable rate limiting** - Protect against abuse

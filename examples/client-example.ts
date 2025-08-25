@@ -16,7 +16,7 @@ async function main() {
   // 1. Initialize the client
   const foremanConfig = {
     endpoint: "http://localhost:3000",
-    apiKey: "your-api-key",
+    apiKey: "your-bearer-token", // Optional: Bearer token for authentication
     queues: {
       // Optional: use custom queue names
       taskQueue: "example:tasks",

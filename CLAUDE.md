@@ -81,7 +81,7 @@ This means you should:
 - RESTful endpoints (no GraphQL)
 - JSON request/response bodies
 - Standard HTTP status codes
-- API key authentication in Authorization header
+- Bearer token authentication in Authorization header
 - Consistent error response format
 
 ### 5. ESM Modules
@@ -337,11 +337,10 @@ const task = await foreman.createTask({
 
 ### Authentication
 
-- Simple API key format validation: `fmn_[env]_[orgId]_[random]`
+- Simple Bearer token validation
 - No database storage (fully trusted environment)
-- Organization ID extracted from key
 - All authenticated users have full access
-- Supports both `x-api-key` header and `Authorization: Bearer` format
+- Only supports `Authorization: Bearer` format
 - Can be disabled via environment variables for testing
 
 ## Common Tasks
@@ -441,8 +440,7 @@ const taskData = await foreman.getTask(taskId);
 ### Security Model
 
 - Fully trusted environment behind firewall
-- Simple API key format validation only
-- Organization ID extracted from API key
+- Simple Bearer token validation only
 - Rate limiting on endpoints
 - No permission checks - all authenticated users have full access
 
@@ -466,7 +464,7 @@ All list endpoints return paginated results with this structure:
 #### Error Responses
 
 - 400: Invalid request data or validation errors
-- 401: Authentication required or invalid API key
+- 401: Authentication required or invalid Bearer token
 - 404: Resource not found
 - 500: Internal server error
 

@@ -22,24 +22,15 @@
 
 ## Overview
 
-Foreman provides a REST API for workflow orchestration. All endpoints require API key authentication (except health check).
+Foreman provides a REST API for workflow orchestration. All endpoints require Bearer token authentication (except health check).
 
 ## Authentication
 
-All API endpoints (except `/api/v1/health`) require authentication. You can use either:
+All API endpoints (except `/api/v1/health`) require authentication using a Bearer token in the Authorization header:
 
-1. **Bearer token** in Authorization header:
-
-   ```
-   Authorization: Bearer fmn_prod_org123_randomstring
-   ```
-
-2. **API key** in x-api-key header:
-   ```
-   x-api-key: fmn_prod_org123_randomstring
-   ```
-
-The API key format is: `fmn_[environment]_[organizationId]_[random]`
+```
+Authorization: Bearer your-secret-token
+```
 
 **Note**: Authentication can be disabled for testing by not setting `FOREMAN_API_KEY_ENABLED` or `FOREMAN_API_KEY` environment variables.
 
@@ -62,7 +53,7 @@ import { initializeForemanClient, createRun } from "@codespin/foreman-client";
 
 const config = {
   endpoint: "http://localhost:3000",
-  apiKey: "fmn_prod_myorg_abc123",
+  apiKey: "your-bearer-token",
 };
 
 const client = await initializeForemanClient(config);
@@ -538,7 +529,7 @@ import { initializeForemanClient, createRun } from "@codespin/foreman-client";
 // 1. Initialize client
 const config = {
   endpoint: "http://localhost:3000",
-  apiKey: "fmn_prod_myorg_abc123",
+  apiKey: "your-bearer-token",
 };
 const client = await initializeForemanClient(config);
 const { enqueueTask, createWorker } = client;
@@ -606,7 +597,7 @@ All list endpoints return paginated results:
 - `200 OK` - Successful GET/PATCH/DELETE requests
 - `201 Created` - Successful POST requests
 - `400 Bad Request` - Invalid request data or validation errors
-- `401 Unauthorized` - Missing or invalid API key
+- `401 Unauthorized` - Missing or invalid Bearer token
 - `404 Not Found` - Resource not found
 - `429 Too Many Requests` - Rate limit exceeded
 - `500 Internal Server Error` - Server error
@@ -641,7 +632,7 @@ const task = result.data;
 
 ## Rate Limits
 
-Default rate limit: 100 requests per 15 minutes per API key.
+Default rate limit: 100 requests per 15 minutes per Bearer token.
 
 ## Additional Information
 
@@ -665,8 +656,6 @@ By default, queries return only the latest value per key. Use `includeAll=true` 
 
 ### Security Model
 
-Foreman runs in a fully trusted environment behind a firewall. All authenticated users have full access to all operations. The API key format (`fmn_[env]_[orgId]_[random]`) is used to:
+Foreman runs in a fully trusted environment behind a firewall. All authenticated users have full access to all operations.
 
-- Validate the caller
-- Extract the organization ID
 - Grant full access to all operations for that organization

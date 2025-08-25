@@ -433,7 +433,7 @@ describe("Foreman Client API", () => {
       if (!result.success) {
         expect(result.error).to.be.instanceOf(Error);
         expect(result.error.message).to.include(
-          "Missing or invalid authorization header",
+          "Bearer token required but not provided",
         );
       }
     });

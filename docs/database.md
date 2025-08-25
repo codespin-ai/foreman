@@ -179,7 +179,7 @@ CREATE TRIGGER update_run_data_updated_at
 
 ### Authentication Note
 
-Foreman uses simplified authentication suitable for a fully trusted environment. API keys follow the format `fmn_[env]_[orgId]_[random]` and are validated by the middleware without database lookups. The organization ID is extracted directly from the API key.
+Foreman uses simplified authentication suitable for a fully trusted environment. Bearer tokens are validated by the middleware without database lookups.
 
 ## Design Decisions
 

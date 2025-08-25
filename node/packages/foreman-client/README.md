@@ -30,13 +30,13 @@ import {
 // Initialize client with default queue names from server
 const config = {
   endpoint: "http://localhost:3000",
-  apiKey: "your-api-key",
+  apiKey: "your-bearer-token", // Optional: Bearer token for authentication
 };
 
 // Or override queue names
 const configWithQueues = {
   endpoint: "http://localhost:3000",
-  apiKey: "your-api-key",
+  apiKey: "your-bearer-token", // Optional: Bearer token for authentication
   queues: {
     taskQueue: "my-custom-tasks",
     resultQueue: "my-custom-results",
@@ -86,7 +86,7 @@ The foreman-client acts as a complete workflow SDK:
 ```typescript
 type ForemanConfig = {
   endpoint: string;
-  apiKey?: string;
+  apiKey?: string; // Optional: Bearer token for authentication
   timeout?: number;
   queues?: {
     taskQueue?: string;
@@ -226,7 +226,7 @@ By default, the client fetches queue names from the Foreman server. You can over
 ```typescript
 const config = {
   endpoint: "http://localhost:3000",
-  apiKey: "your-api-key",
+  apiKey: "your-bearer-token", // Optional: Bearer token for authentication
   queues: {
     taskQueue: "my-app:tasks", // Default: from server config
     resultQueue: "my-app:results", // Default: from server config
@@ -245,7 +245,7 @@ This is useful when:
 The client respects these environment variables when connecting to Foreman:
 
 - `FOREMAN_ENDPOINT` - Default Foreman server URL
-- `FOREMAN_API_KEY` - Default API key for authentication
+- `FOREMAN_API_KEY` - Default Bearer token for authentication
 - `FOREMAN_TIMEOUT` - Default request timeout in milliseconds
 
 ### Testing

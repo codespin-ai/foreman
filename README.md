@@ -120,8 +120,8 @@ export REDIS_DB=0                          # Optional
 export TASK_QUEUE_NAME=foreman:tasks       # Default: foreman:tasks
 export RESULT_QUEUE_NAME=foreman:results   # Default: foreman:results
 
-# API configuration
-export FOREMAN_API_KEY=fmn_dev_testorg_123 # Optional: Default API key
+# Optional Bearer authentication
+export FOREMAN_API_KEY=your-secret-token
 
 # Run migrations
 npm run migrate:foreman:latest
@@ -139,30 +139,20 @@ The REST API will be available at `http://localhost:3000`.
 
 ### Authentication
 
-All API endpoints (except health check) require authentication. You can use either:
+All API endpoints (except health check) require authentication using a Bearer token in the Authorization header:
 
-1. **Bearer token** in Authorization header:
-
-   ```
-   Authorization: Bearer fmn_prod_org123_randomstring
-   ```
-
-2. **API key** in x-api-key header:
-   ```
-   x-api-key: fmn_prod_org123_randomstring
-   ```
-
-The API key format is: `fmn_[environment]_[organizationId]_[random]`
+```
+Authorization: Bearer your-secret-token
+```
 
 Since Foreman runs in a fully trusted environment, the authentication is simplified:
 
 - No permission checks - all authenticated users have full access
-- No database validation - API key format is validated only
-- Organization ID is extracted from the API key
+- Simple token validation against configured token
 
 For testing:
 
-- Set `FOREMAN_API_KEY` environment variable to use a specific test key
+- Set `FOREMAN_API_KEY` environment variable to configure the Bearer token
 - Authentication can be disabled by not setting `FOREMAN_API_KEY_ENABLED` or `FOREMAN_API_KEY`
 
 ### Health Check

@@ -427,7 +427,7 @@ scrape_configs:
 ## Security Considerations
 
 1. **Always use HTTPS** in production
-2. **Secure API keys** - Use proper key management
+2. **Secure tokens** - Use proper token management
 3. **Database security** - Use SSL connections
 4. **Redis security** - Always set a password
 5. **Network isolation** - Use private networks

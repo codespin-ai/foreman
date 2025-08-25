@@ -533,6 +533,12 @@ Both test suites:
 # Build all packages
 ./build.sh
 
+# Run linting
+./lint-all.sh
+
+# Format with Prettier (called automatically during build)
+./format-all.sh
+
 # Clean build artifacts
 ./clean.sh
 ```

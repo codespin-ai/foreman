@@ -162,9 +162,6 @@ const params = typeUtils.toSnakeCase({
 ./lint-all.sh           # Run ESLint on all packages
 ./lint-all.sh --fix     # Run ESLint with auto-fix
 
-# Format code with Prettier (MUST run before committing)
-./format-all.sh         # Format all files
-./format-all.sh --check # Check formatting without changing files
 ```
 
 ### Database Commands
@@ -223,10 +220,9 @@ See [README.md](../README.md#project-structure) for package details. Key point: 
 
 **IMPORTANT**: NEVER commit and push changes without explicit user permission. When the user asks you to commit and push:
 
-1. Run `./format-all.sh` to format all files with Prettier
-2. Run `./lint-all.sh` to ensure code passes linting
-3. Follow the git commit guidelines in the main Claude system prompt
-4. Get explicit user confirmation before any `git push`
+1. Run `./lint-all.sh` to ensure code passes linting
+2. Follow the git commit guidelines in the main Claude system prompt
+3. Get explicit user confirmation before any `git push`
 
 ## Configuration
 

@@ -5,7 +5,7 @@ import compression from "compression";
 import rateLimit from "express-rate-limit";
 import { config } from "dotenv";
 import { createLogger } from "@codespin/foreman-logger";
-import { getDb, closeDb } from "@codespin/foreman-db";
+import { createLazyDb } from "@codespin/foreman-db";
 import { runsRouter } from "./routes/runs.js";
 import { tasksRouter } from "./routes/tasks.js";
 import { runDataRouter } from "./routes/run-data.js";
@@ -17,6 +17,9 @@ config();
 const logger = createLogger("foreman-server");
 const app = express();
 const port = process.env.FOREMAN_SERVER_PORT || process.env.PORT || 5002;
+
+// Initialize health check database (ROOT context)
+const healthCheckDb = createLazyDb();
 
 // Security middleware
 app.use(helmet());
@@ -64,11 +67,11 @@ app.get("/health", async (_req, res) => {
 
   // Check database connection
   try {
-    const db = getDb();
-    await db.one("SELECT 1 as ok");
+    await healthCheckDb.one("SELECT 1 as ok");
     services.database = "connected";
-  } catch {
+  } catch (error) {
     services.database = "disconnected";
+    logger.error("Database health check failed:", error);
   }
 
   // Check Redis connection (if configured)
@@ -78,8 +81,10 @@ app.get("/health", async (_req, res) => {
     services.redis = "configured";
   }
 
-  res.json({
-    status: "healthy",
+  const isHealthy = services.database === "connected";
+
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? "healthy" : "unhealthy",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "development",
     services,
@@ -120,11 +125,6 @@ app.use(
 // Start server
 async function start(): Promise<void> {
   try {
-    // Test database connection
-    const db = getDb();
-    await db.one("SELECT 1 as ok");
-    logger.info("Database connection established");
-
     // Start listening
     app.listen(port, () => {
       logger.info("Server running", { port });
@@ -138,13 +138,11 @@ async function start(): Promise<void> {
 // Graceful shutdown
 process.on("SIGTERM", async () => {
   logger.info("SIGTERM received, shutting down gracefully");
-  await closeDb();
   process.exit(0);
 });
 
 process.on("SIGINT", async () => {
   logger.info("SIGINT received, shutting down gracefully");
-  await closeDb();
   process.exit(0);
 });
 

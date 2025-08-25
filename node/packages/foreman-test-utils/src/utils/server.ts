@@ -60,6 +60,11 @@ export class TestServer {
         FOREMAN_DB_NAME: this.dbName, // Use test database
         FOREMAN_DB_USER: process.env.FOREMAN_DB_USER || "postgres",
         FOREMAN_DB_PASSWORD: process.env.FOREMAN_DB_PASSWORD || "postgres",
+        // RLS database users
+        UNRESTRICTED_DB_USER: process.env.UNRESTRICTED_DB_USER || "unrestricted_db_user",
+        UNRESTRICTED_DB_USER_PASSWORD: process.env.UNRESTRICTED_DB_USER_PASSWORD || "postgres",
+        RLS_DB_USER: process.env.RLS_DB_USER || "rls_db_user",
+        RLS_DB_USER_PASSWORD: process.env.RLS_DB_USER_PASSWORD || "postgres",
         FOREMAN_API_KEY: process.env.FOREMAN_API_KEY || "test-api-key",
         FOREMAN_API_KEY_ENABLED: process.env.FOREMAN_API_KEY_ENABLED || "true",
       };

@@ -17,6 +17,8 @@ export class TestHttpClient {
       "Content-Type": "application/json",
       // Default test API key
       "x-api-key": "test-api-key",
+      // Default test org (same as Permiso pattern)
+      "x-org-id": "test-org",
       ...options?.headers,
     };
   }
@@ -115,6 +117,14 @@ export class TestHttpClient {
   // Convenience methods for testing
   setApiKey(apiKey: string): void {
     this.defaultHeaders["x-api-key"] = apiKey;
+  }
+
+  setOrgId(orgId: string | undefined): void {
+    if (orgId) {
+      this.defaultHeaders["x-org-id"] = orgId;
+    } else {
+      delete this.defaultHeaders["x-org-id"];
+    }
   }
 
   setAuthHeader(value: string): void {

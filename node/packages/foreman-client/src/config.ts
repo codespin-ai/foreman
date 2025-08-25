@@ -11,6 +11,23 @@ import type {
 } from "./types.js";
 import { httpRequest } from "./http-client.js";
 
+/**
+ * Build headers with auth and org ID
+ */
+function buildHeaders(config: ForemanConfig): Record<string, string> {
+  const headers: Record<string, string> = {};
+
+  if (config.orgId) {
+    headers["x-org-id"] = config.orgId;
+  }
+
+  if (config.apiKey) {
+    headers.Authorization = `Bearer ${config.apiKey}`;
+  }
+
+  return headers;
+}
+
 // Cache configuration for 5 minutes
 const CONFIG_CACHE_TTL = 5 * 60 * 1000;
 let configCache: {
@@ -37,11 +54,7 @@ export async function getRedisConfig(
     const result = await httpRequest<RedisConfig>({
       method: "GET",
       url: `${config.endpoint}/api/v1/config/redis`,
-      headers: config.apiKey
-        ? {
-            Authorization: `Bearer ${config.apiKey}`,
-          }
-        : undefined,
+      headers: buildHeaders(config),
       timeout: config.timeout,
     });
 
@@ -85,11 +98,7 @@ export async function getQueueConfig(
     const result = await httpRequest<QueueConfig>({
       method: "GET",
       url: `${config.endpoint}/api/v1/config/queues`,
-      headers: config.apiKey
-        ? {
-            Authorization: `Bearer ${config.apiKey}`,
-          }
-        : undefined,
+      headers: buildHeaders(config),
       timeout: config.timeout,
     });
 

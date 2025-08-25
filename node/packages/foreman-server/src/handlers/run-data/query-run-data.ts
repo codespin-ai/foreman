@@ -73,12 +73,7 @@ export async function queryRunDataHandler(
       sortOrder: params.sortOrder,
     };
 
-    const result = await queryRunData(
-      ctx,
-      runId!,
-      req.auth!.orgId,
-      queryParams,
-    );
+    const result = await queryRunData(ctx, runId!, queryParams);
 
     if (!result.success) {
       res.status(404).json({ error: result.error.message });

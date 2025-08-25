@@ -1,12 +1,12 @@
 /**
  * Enable Row Level Security (RLS) for multi-tenant isolation
- * 
+ *
  * This migration:
  * 1. Creates database users for RLS
- * 2. Grants appropriate permissions  
+ * 2. Grants appropriate permissions
  * 3. Enables RLS on tenant-scoped tables
  * 4. Creates security policies
- * 
+ *
  * Special handling: If x-org-id header is "ROOT", uses unrestricted access
  * Otherwise, uses RLS policies to filter by organization
  */
@@ -18,7 +18,7 @@
 export const up = async (knex) => {
   // Note: User creation requires superuser privileges
   // These may need to be run separately by a DBA in production
-  
+
   // Create users (wrapped in DO block to handle existing users)
   await knex.raw(`
     DO $$
@@ -63,11 +63,7 @@ export const up = async (knex) => {
   `);
 
   // Enable RLS on tenant-scoped tables (all tables have org_id)
-  const tenantTables = [
-    "run",
-    "task", 
-    "run_data"
-  ];
+  const tenantTables = ["run", "task", "run_data"];
 
   // Enable RLS on each table
   for (const table of tenantTables) {
@@ -75,7 +71,7 @@ export const up = async (knex) => {
   }
 
   // Create RLS policies
-  
+
   // All tables have org_id and follow the same pattern
   for (const table of tenantTables) {
     await knex.raw(`
@@ -103,11 +99,7 @@ export const up = async (knex) => {
  */
 export const down = async (knex) => {
   // Drop all policies
-  const tenantTables = [
-    "run",
-    "task",
-    "run_data"
-  ];
+  const tenantTables = ["run", "task", "run_data"];
 
   // Drop policies
   for (const table of tenantTables) {

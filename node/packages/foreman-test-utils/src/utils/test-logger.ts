@@ -20,7 +20,7 @@ export const testLogger: Logger = {
   error: isVerbose ? console.error : () => {},
 };
 
-// Default logger that always logs (for backward compatibility)
+// Logger that always outputs to console
 export const consoleLogger: Logger = {
   debug: console.debug,
   info: console.info,

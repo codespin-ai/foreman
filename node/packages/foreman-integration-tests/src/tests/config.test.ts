@@ -86,7 +86,7 @@ describe("Config API", () => {
 
     it("should work with valid API key header", async () => {
       const response = await client.get("/api/v1/config", {
-        "x-api-key": "fmn_test_testorg_abc123",
+        "x-api-key": "test-api-key",
       });
 
       expect(response.status).to.equal(200);
@@ -95,20 +95,21 @@ describe("Config API", () => {
 
     it("should work with valid Authorization header", async () => {
       const response = await client.get("/api/v1/config", {
-        Authorization: "Bearer fmn_test_testorg_abc123",
+        Authorization: "Bearer test-api-key",
       });
 
       expect(response.status).to.equal(200);
       expect(response.data).to.have.property("redis");
     });
 
-    it("should reject invalid API key format", async () => {
+    // Format validation removed - any non-empty key is valid in full-trust mode
+    it("should accept any API key format in full-trust mode", async () => {
       const response = await client.get("/api/v1/config", {
-        "x-api-key": "invalid-key-format",
+        "x-api-key": "any-key-format-works",
       });
 
-      expect(response.status).to.equal(401);
-      expect(response.data).to.have.property("error");
+      expect(response.status).to.equal(200);
+      expect(response.data).to.have.property("redis");
     });
   });
 

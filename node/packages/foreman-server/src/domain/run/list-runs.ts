@@ -40,7 +40,8 @@ export async function listRuns(
       queryParams.status = params.status;
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const whereClause =
+      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     // Get total count
     const countResult = await ctx.db.one<{ count: string }>(

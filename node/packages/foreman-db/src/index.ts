@@ -95,18 +95,3 @@ export function createUnrestrictedDb(): Database {
 
   return getOrCreateConnection(user, password) as Database;
 }
-
-// Legacy function for backward compatibility - will be removed later
-// For now, returns unrestricted database for existing code
-export function getDb(): Database {
-  return createUnrestrictedDb();
-}
-
-// Legacy function for backward compatibility
-export async function closeDb(): Promise<void> {
-  // Close all connection pools
-  for (const [key, pool] of connectionPools) {
-    await pool.$pool.end();
-    connectionPools.delete(key);
-  }
-}

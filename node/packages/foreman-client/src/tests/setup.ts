@@ -19,7 +19,8 @@ export const client = new TestHttpClient(`http://localhost:5003`);
 // Test configuration for client library
 export const getTestConfig = () => ({
   endpoint: "http://localhost:5003",
-  apiKey: "fmn_test_clientorg_abc123",
+  orgId: "test-org",
+  apiKey: "test-api-key",
   timeout: 30000,
 });
 

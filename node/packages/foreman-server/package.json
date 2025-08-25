@@ -1,6 +1,6 @@
 {
   "name": "@codespin/foreman-server",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "REST API server for Foreman",
   "type": "module",
   "main": "./dist/index.js",

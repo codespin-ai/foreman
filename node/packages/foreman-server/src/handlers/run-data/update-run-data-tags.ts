@@ -24,12 +24,7 @@ export async function updateRunDataTagsHandler(
     const input = updateRunDataTagsSchema.parse(req.body);
     const ctx = createContext(req);
 
-    const result = await updateRunDataTags(
-      ctx,
-      dataId!,
-      req.auth!.orgId,
-      input,
-    );
+    const result = await updateRunDataTags(ctx, dataId!, input);
 
     if (!result.success) {
       res.status(404).json({ error: result.error.message });

@@ -77,7 +77,11 @@ export async function createRunData(
       return success(mapRunDataFromDb(row));
     });
   } catch (error) {
-    logger.error("Failed to create run data", { error, orgId: ctx.orgId, input });
+    logger.error("Failed to create run data", {
+      error,
+      orgId: ctx.orgId,
+      input,
+    });
     return failure(error as Error);
   }
 }

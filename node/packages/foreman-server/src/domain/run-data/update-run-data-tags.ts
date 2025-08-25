@@ -16,26 +16,20 @@ export interface UpdateRunDataTagsInput {
  *
  * @param ctx - Data context containing database connection
  * @param dataId - Run data entry ID
- * @param orgId - Organization ID for access control
  * @param input - Tags to add/remove
  * @returns Result containing the updated run data or an error
  */
 export async function updateRunDataTags(
   ctx: DataContext,
   dataId: string,
-  orgId: string,
   input: UpdateRunDataTagsInput,
 ): Promise<Result<RunData, Error>> {
   try {
     return await ctx.db.tx(async (t) => {
-      // Verify data entry exists and belongs to org
+      // Verify data entry exists (RLS will check org access)
       const check = await t.oneOrNone<{ tags: string[] }>(
-        `SELECT rd.tags
-         FROM run_data rd
-         JOIN run r ON r.id = rd.run_id
-         WHERE rd.id = $(data_id) 
-           AND r.org_id = $(org_id)`,
-        { data_id: dataId, org_id: orgId },
+        `SELECT tags FROM run_data WHERE id = $(data_id)`,
+        { data_id: dataId },
       );
 
       if (!check) {
@@ -75,7 +69,7 @@ export async function updateRunDataTags(
       return success(mapRunDataFromDb(row));
     });
   } catch (error) {
-    logger.error("Failed to update run data tags", { error, dataId, orgId });
+    logger.error("Failed to update run data tags", { error, dataId });
     return failure(error as Error);
   }
 }

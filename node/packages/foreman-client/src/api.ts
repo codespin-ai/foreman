@@ -23,6 +23,23 @@ import type {
 import { httpRequest, buildQueryString } from "./http-client.js";
 
 /**
+ * Build headers with auth and org ID
+ */
+function buildHeaders(config: ForemanConfig): Record<string, string> {
+  const headers: Record<string, string> = {};
+
+  if (config.orgId) {
+    headers["x-org-id"] = config.orgId;
+  }
+
+  if (config.apiKey) {
+    headers.Authorization = `Bearer ${config.apiKey}`;
+  }
+
+  return headers;
+}
+
+/**
  * Create a new run
  */
 export async function createRun(
@@ -32,9 +49,7 @@ export async function createRun(
   return httpRequest<Run>({
     method: "POST",
     url: `${config.endpoint}/api/v1/runs`,
-    headers: config.apiKey
-      ? { Authorization: `Bearer ${config.apiKey}` }
-      : undefined,
+    headers: buildHeaders(config),
     body: input,
     timeout: config.timeout,
   });
@@ -50,9 +65,7 @@ export async function getRun(
   return httpRequest<Run>({
     method: "GET",
     url: `${config.endpoint}/api/v1/runs/${id}`,
-    headers: config.apiKey
-      ? { Authorization: `Bearer ${config.apiKey}` }
-      : undefined,
+    headers: buildHeaders(config),
     timeout: config.timeout,
   });
 }
@@ -68,9 +81,7 @@ export async function updateRun(
   return httpRequest<Run>({
     method: "PATCH",
     url: `${config.endpoint}/api/v1/runs/${id}`,
-    headers: config.apiKey
-      ? { Authorization: `Bearer ${config.apiKey}` }
-      : undefined,
+    headers: buildHeaders(config),
     body: input,
     timeout: config.timeout,
   });
@@ -87,9 +98,7 @@ export async function listRuns(
   return httpRequest<PaginatedResult<Run>>({
     method: "GET",
     url: `${config.endpoint}/api/v1/runs${queryString}`,
-    headers: config.apiKey
-      ? { Authorization: `Bearer ${config.apiKey}` }
-      : undefined,
+    headers: buildHeaders(config),
     timeout: config.timeout,
   });
 }
@@ -104,9 +113,7 @@ export async function createTask(
   return httpRequest<Task>({
     method: "POST",
     url: `${config.endpoint}/api/v1/tasks`,
-    headers: config.apiKey
-      ? { Authorization: `Bearer ${config.apiKey}` }
-      : undefined,
+    headers: buildHeaders(config),
     body: input,
     timeout: config.timeout,
   });
@@ -122,9 +129,7 @@ export async function getTask(
   return httpRequest<Task>({
     method: "GET",
     url: `${config.endpoint}/api/v1/tasks/${id}`,
-    headers: config.apiKey
-      ? { Authorization: `Bearer ${config.apiKey}` }
-      : undefined,
+    headers: buildHeaders(config),
     timeout: config.timeout,
   });
 }
@@ -140,9 +145,7 @@ export async function updateTask(
   return httpRequest<Task>({
     method: "PATCH",
     url: `${config.endpoint}/api/v1/tasks/${id}`,
-    headers: config.apiKey
-      ? { Authorization: `Bearer ${config.apiKey}` }
-      : undefined,
+    headers: buildHeaders(config),
     body: input,
     timeout: config.timeout,
   });
@@ -159,9 +162,7 @@ export async function listTasks(
   return httpRequest<PaginatedResult<Task>>({
     method: "GET",
     url: `${config.endpoint}/api/v1/tasks${queryString}`,
-    headers: config.apiKey
-      ? { Authorization: `Bearer ${config.apiKey}` }
-      : undefined,
+    headers: buildHeaders(config),
     timeout: config.timeout,
   });
 }
@@ -238,9 +239,7 @@ export async function createRunData(
   return httpRequest<RunData>({
     method: "POST",
     url: `${config.endpoint}/api/v1/runs/${runId}/data`,
-    headers: config.apiKey
-      ? { Authorization: `Bearer ${config.apiKey}` }
-      : undefined,
+    headers: buildHeaders(config),
     body: input,
     timeout: config.timeout,
   });
@@ -269,9 +268,7 @@ export async function queryRunData(
   }>({
     method: "GET",
     url: `${config.endpoint}/api/v1/runs/${runId}/data${queryString}`,
-    headers: config.apiKey
-      ? { Authorization: `Bearer ${config.apiKey}` }
-      : undefined,
+    headers: buildHeaders(config),
     timeout: config.timeout,
   });
 }
@@ -288,9 +285,7 @@ export async function updateRunDataTags(
   return httpRequest<RunData>({
     method: "PATCH",
     url: `${config.endpoint}/api/v1/runs/${runId}/data/${dataId}/tags`,
-    headers: config.apiKey
-      ? { Authorization: `Bearer ${config.apiKey}` }
-      : undefined,
+    headers: buildHeaders(config),
     body: input,
     timeout: config.timeout,
   });
@@ -308,9 +303,7 @@ export async function deleteRunData(
   return httpRequest<{ deleted: number }>({
     method: "DELETE",
     url: `${config.endpoint}/api/v1/runs/${runId}/data${queryString}`,
-    headers: config.apiKey
-      ? { Authorization: `Bearer ${config.apiKey}` }
-      : undefined,
+    headers: buildHeaders(config),
     timeout: config.timeout,
   });
 }

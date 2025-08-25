@@ -31,21 +31,19 @@ export interface QueryRunDataParams {
  *
  * @param ctx - Data context containing database connection
  * @param runId - Run ID
- * @param orgId - Organization ID for access control
  * @param params - Query parameters
  * @returns Result containing the run data list or an error
  */
 export async function queryRunData(
   ctx: DataContext,
   runId: string,
-  orgId: string,
   params: QueryRunDataParams = {},
 ): Promise<Result<RunData[], Error>> {
   try {
-    // Verify run exists and belongs to org
+    // Verify run exists (RLS will check org access)
     const runCheck = await ctx.db.oneOrNone<{ id: string }>(
-      `SELECT id FROM run WHERE id = $(run_id) AND org_id = $(org_id)`,
-      { run_id: runId, org_id: orgId },
+      `SELECT id FROM run WHERE id = $(run_id)`,
+      { run_id: runId },
     );
 
     if (!runCheck) {
@@ -176,7 +174,7 @@ export async function queryRunData(
 
     return success(data);
   } catch (error) {
-    logger.error("Failed to query run data", { error, runId, orgId, params });
+    logger.error("Failed to query run data", { error, runId, params });
     return failure(error as Error);
   }
 }

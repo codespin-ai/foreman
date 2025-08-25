@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { createLogger } from "@codespin/foreman-logger";
 import { createContext } from "../create-context.js";
+import { deleteRunData } from "../../domain/run-data/delete-run-data.js";
 
 const logger = createLogger("foreman:handlers:run-data:delete");
 
@@ -26,41 +27,19 @@ export async function deleteRunDataHandler(
     const { runId } = req.params;
     const queryParams = deleteRunDataSchema.parse(req.query);
     const ctx = createContext(req);
-    const { db } = ctx;
 
-    let deletedCount = 0;
+    const result = await deleteRunData(ctx, {
+      runId: runId!,
+      key: queryParams.key,
+      id: queryParams.id,
+    });
 
-    if (queryParams.id) {
-      // Delete specific entry by ID
-      const result = await db.result(
-        `DELETE FROM run_data rd
-         USING run r
-         WHERE rd.id = $(id) 
-           AND rd.run_id = r.id
-           AND r.org_id = $(org_id)`,
-        { id: queryParams.id, org_id: req.auth!.orgId },
-      );
-      deletedCount = result.rowCount;
-    } else if (queryParams.key) {
-      // Delete all entries for a key
-      const result = await db.result(
-        `DELETE FROM run_data rd
-         USING run r
-         WHERE rd.run_id = $(run_id)
-           AND rd.key = $(key)
-           AND rd.run_id = r.id
-           AND r.org_id = $(org_id)`,
-        { run_id: runId, key: queryParams.key, org_id: req.auth!.orgId },
-      );
-      deletedCount = result.rowCount;
-    }
-
-    if (deletedCount === 0) {
-      res.status(404).json({ error: "No matching run data found" });
+    if (!result.success) {
+      res.status(404).json({ error: result.error.message });
       return;
     }
 
-    res.json({ deleted: deletedCount });
+    res.json(result.data);
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: "Invalid request", details: error.errors });

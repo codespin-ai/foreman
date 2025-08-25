@@ -88,11 +88,20 @@ export async function updateRun(
       return failure(new Error(`Run not found: ${id}`));
     }
 
-    logger.info("Updated run", { id, orgId: ctx.orgId, updates: Object.keys(input) });
+    logger.info("Updated run", {
+      id,
+      orgId: ctx.orgId,
+      updates: Object.keys(input),
+    });
 
     return success(mapRunFromDb(row));
   } catch (error) {
-    logger.error("Failed to update run", { error, id, orgId: ctx.orgId, input });
+    logger.error("Failed to update run", {
+      error,
+      id,
+      orgId: ctx.orgId,
+      input,
+    });
     return failure(error as Error);
   }
 }

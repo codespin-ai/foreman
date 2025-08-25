@@ -66,7 +66,7 @@ describe("Foreman Client API", () => {
       expect(result.success).to.be.true;
       if (result.success) {
         expect(result.data).to.have.property("id");
-        expect(result.data).to.have.property("orgId", "clientorg");
+        expect(result.data).to.have.property("orgId", "test-org");
         expect(result.data).to.have.property("status", "pending");
         expect(result.data).to.have.property("inputData");
         expect(result.data.inputData).to.deep.equal({
@@ -422,7 +422,7 @@ describe("Foreman Client API", () => {
     it("should handle unauthorized requests", async () => {
       const unauthorizedConfig = {
         ...config,
-        apiKey: "invalid-key",
+        apiKey: undefined, // No API key
       };
 
       const result = await createRun(unauthorizedConfig, {
@@ -432,7 +432,7 @@ describe("Foreman Client API", () => {
       expect(result.success).to.be.false;
       if (!result.success) {
         expect(result.error).to.be.instanceOf(Error);
-        expect(result.error.message).to.include("Invalid API key format");
+        expect(result.error.message).to.include("API key required");
       }
     });
 

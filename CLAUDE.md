@@ -422,6 +422,7 @@ This approach:
 ### Optimizing Build Speed During Debugging
 
 **TIP**: Use `./build.sh --no-format` during debugging sessions to skip prettier formatting. This:
+
 - Reduces build time significantly
 - Minimizes output that gets sent to the AI model (reducing token count)
 - Makes the debugging cycle faster

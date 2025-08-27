@@ -62,7 +62,7 @@ export async function httpRequest<T>(
 /**
  * Build query string from parameters
  */
-export function buildQueryString(params: Record<string, any>): string {
+export function buildQueryString(params: Record<string, unknown>): string {
   const searchParams = new URLSearchParams();
 
   for (const [key, value] of Object.entries(params)) {

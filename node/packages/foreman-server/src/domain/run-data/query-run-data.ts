@@ -52,7 +52,7 @@ export async function queryRunData(
 
     // Build query conditions
     const conditions: string[] = ["rd.run_id = $(run_id)"];
-    const queryParams: Record<string, any> = { run_id: runId };
+    const queryParams: Record<string, unknown> = { run_id: runId };
 
     // Key conditions (OR between different key filters)
     const keyConditions: string[] = [];

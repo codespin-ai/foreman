@@ -105,7 +105,7 @@ app.use((_req, res) => {
 // Error handler
 app.use(
   (
-    err: any,
+    err: unknown,
     _req: express.Request,
     res: express.Response,
     _next: express.NextFunction,

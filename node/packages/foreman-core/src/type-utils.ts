@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Type utilities for string case conversion
 type CamelCase<S extends string> =
   S extends `${infer P1}_${infer P2}${infer P3}`

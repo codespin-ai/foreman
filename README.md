@@ -95,7 +95,7 @@ cd foreman
 npm install
 
 # Build all packages
-./build.sh
+./scripts/build.sh
 ```
 
 #### Database Setup
@@ -130,7 +130,7 @@ npm run migrate:foreman:latest
 ### Starting the Server
 
 ```bash
-./start.sh
+./scripts/start.sh
 ```
 
 The REST API will be available at `http://localhost:3000`.
@@ -521,16 +521,16 @@ Both test suites:
 
 ```bash
 # Build all packages
-./build.sh
+./scripts/build.sh
 
 # Run linting
-./lint-all.sh
+./scripts/lint-all.sh
 
 # Format with Prettier (called automatically during build)
-./format-all.sh
+./scripts/format-all.sh
 
 # Clean build artifacts
-./clean.sh
+./scripts/clean.sh
 ```
 
 ## Contributing

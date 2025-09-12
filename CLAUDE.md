@@ -102,7 +102,19 @@ This means you should:
 - Prefer `type` over `interface` (use `interface` only for extensible contracts)
 - Use Result types for error handling instead of exceptions
 
-### 3. Database Conventions
+### 3. Security: Never Use npx
+
+**CRITICAL SECURITY REQUIREMENT**: NEVER use `npx` for any commands. This poses grave security risks by executing arbitrary code.
+
+- **ALWAYS use exact dependency versions** in package.json
+- **ALWAYS use local node_modules binaries** (e.g., `prettier`, `mocha`, `http-server`)
+- **NEVER use `npx prettier`** - use `prettier` from local dependencies
+- **NEVER use `npx mocha`** - use `mocha` from local dependencies  
+- **NEVER use `npx http-server`** - add `http-server` as dependency and use directly
+
+**Exception**: The only acceptable `npx` usage is for one-time project initialization (e.g., `npx create-react-app`) when explicitly setting up new projects, but NEVER for ongoing development commands.
+
+### 4. Database Conventions
 
 - **PostgreSQL** with **Knex.js** for migrations
 - **pg-promise** for data access (NO ORMs)
@@ -121,7 +133,7 @@ This means you should:
 - **Example**: Instead of a complex join to fetch related data, use 2-3 simple queries when clearer
 - This approach makes the code easier to understand and maintain
 
-### 4. REST API Design
+### 5. REST API Design
 
 - RESTful endpoints (no GraphQL)
 - JSON request/response bodies

@@ -14,6 +14,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **ONLY make changes AFTER the user explicitly approves.** When you identify issues or potential improvements, explain them clearly and wait for the user's decision. Do NOT assume what the user wants or make "helpful" changes without permission.
 
+## CRITICAL: FINISH DISCUSSIONS BEFORE WRITING CODE
+
+**IMPORTANT**: When the user asks a question or you're in the middle of a discussion, DO NOT jump to writing code. Always:
+
+1. **Complete the discussion first** - Understand the problem fully
+2. **Analyze and explain** - Work through the issue verbally
+3. **Get confirmation** - Ensure the user agrees with the approach
+4. **Only then write code** - After the user explicitly asks you to implement
+
+Do not write code while discussing or analyzing a problem unless the user specifically asks you to.
+
 ## CRITICAL: NEVER USE MULTIEDIT
 
 **NEVER use the MultiEdit tool.** It has caused issues in multiple projects. Always use individual Edit operations instead, even if it means more edits. This ensures better control and prevents unintended changes.
@@ -102,7 +113,19 @@ This means you should:
 - Prefer `type` over `interface` (use `interface` only for extensible contracts)
 - Use Result types for error handling instead of exceptions
 
-### 3. Database Conventions
+### 3. Security: Never Use npx
+
+**CRITICAL SECURITY REQUIREMENT**: NEVER use `npx` for any commands. This poses grave security risks by executing arbitrary code.
+
+- **ALWAYS use exact dependency versions** in package.json
+- **ALWAYS use local node_modules binaries** (e.g., `prettier`, `mocha`, `http-server`)
+- **NEVER use `npx prettier`** - use `prettier` from local dependencies
+- **NEVER use `npx mocha`** - use `mocha` from local dependencies  
+- **NEVER use `npx http-server`** - add `http-server` as dependency and use directly
+
+**Exception**: The only acceptable `npx` usage is for one-time project initialization (e.g., `npx create-react-app`) when explicitly setting up new projects, but NEVER for ongoing development commands.
+
+### 4. Database Conventions
 
 - **PostgreSQL** with **Knex.js** for migrations
 - **pg-promise** for data access (NO ORMs)
@@ -121,7 +144,7 @@ This means you should:
 - **Example**: Instead of a complex join to fetch related data, use 2-3 simple queries when clearer
 - This approach makes the code easier to understand and maintain
 
-### 4. REST API Design
+### 5. REST API Design
 
 - RESTful endpoints (no GraphQL)
 - JSON request/response bodies
@@ -207,6 +230,11 @@ const params = typeUtils.toSnakeCase({
 # Lint entire project (from root)
 ./scripts/lint-all.sh           # Run ESLint on all packages
 ./scripts/lint-all.sh --fix     # Run ESLint with auto-fix
+
+# Docker commands
+./scripts/docker-build.sh       # Build Docker image
+./scripts/docker-test.sh        # Test Docker image (see Docker section for options)
+./scripts/docker-push.sh latest ghcr.io/codespin-ai  # Push to registry
 
 ```
 

@@ -15,8 +15,8 @@ COPY node/packages/foreman-db/package*.json ./node/packages/foreman-db/
 COPY node/packages/foreman-server/package*.json ./node/packages/foreman-server/
 COPY node/packages/foreman-client/package*.json ./node/packages/foreman-client/
 
-# Copy build scripts
-COPY build.sh clean.sh format-all.sh ./
+# Copy build scripts from scripts directory
+COPY scripts/ ./scripts/
 
 # Copy TypeScript config
 COPY tsconfig.base.json ./
@@ -27,8 +27,8 @@ COPY node ./node
 COPY database ./database
 
 # Install dependencies and build
-RUN chmod +x build.sh clean.sh format-all.sh && \
-    ./build.sh --install
+RUN chmod +x scripts/build.sh scripts/clean.sh scripts/format-all.sh && \
+    ./scripts/build.sh --install
 
 # Runtime stage - Ubuntu minimal
 FROM ubuntu:24.04 AS runtime
@@ -58,7 +58,7 @@ COPY --from=builder --chown=foreman:root /app/node_modules ./node_modules
 COPY --from=builder --chown=foreman:root /app/knexfile.js ./
 
 # Copy start script and entrypoint
-COPY --chown=foreman:root start.sh docker-entrypoint.sh ./
+COPY --chown=foreman:root scripts/start.sh scripts/docker-entrypoint.sh ./
 RUN chmod +x start.sh docker-entrypoint.sh
 
 # Switch to non-root user

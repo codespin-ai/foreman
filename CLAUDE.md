@@ -193,20 +193,20 @@ const params = typeUtils.toSnakeCase({
 
 ```bash
 # Build entire project (from root)
-./build.sh              # Standard build with formatting
-./build.sh --install    # Force npm install in all packages
-./build.sh --migrate    # Build + run DB migrations
-./build.sh --no-format  # Skip prettier formatting (faster builds)
+./scripts/build.sh              # Standard build with formatting
+./scripts/build.sh --install    # Force npm install in all packages
+./scripts/build.sh --migrate    # Build + run DB migrations
+./scripts/build.sh --no-format  # Skip prettier formatting (faster builds)
 
 # Clean build artifacts
-./clean.sh
+./scripts/clean.sh
 
 # Start the server
-./start.sh
+./scripts/start.sh
 
 # Lint entire project (from root)
-./lint-all.sh           # Run ESLint on all packages
-./lint-all.sh --fix     # Run ESLint with auto-fix
+./scripts/lint-all.sh           # Run ESLint on all packages
+./scripts/lint-all.sh --fix     # Run ESLint with auto-fix
 
 ```
 
@@ -243,7 +243,7 @@ See `/database/foreman/migrations/` for migration history. Key changes:
 
 ## Package Structure
 
-See [README.md](../README.md#project-structure) for package details. Key point: When adding new packages, you MUST update the `PACKAGES` array in `./build.sh`.
+See [README.md](../README.md#project-structure) for package details. Key point: When adding new packages, you MUST update the `PACKAGES` array in `./scripts/build.sh`.
 
 ## Development Workflow
 
@@ -252,7 +252,7 @@ See [README.md](../README.md#project-structure) for package details. Key point: 
 3. **Implement Domain Functions**: Add domain functions in `foreman-server/src/domain/`
 4. **Add Routes**: Implement REST endpoints in `foreman-server/src/routes/`
 5. **Update Client**: Add methods to `foreman-client` if needed
-6. **Build**: Run `./build.sh` from root
+6. **Build**: Run `./scripts/build.sh` from root
 7. **Test**: Add integration tests in `foreman-integration-tests` and client tests in `foreman-client`
 
 ## Git Workflow
@@ -264,9 +264,18 @@ See [README.md](../README.md#project-structure) for package details. Key point: 
 3. **Use revert commits instead of force push** - To undo changes, create revert commits that preserve history
 4. **If you need to overwrite remote**, explain the consequences and get explicit confirmation first
 
-**IMPORTANT**: NEVER commit and push changes without explicit user permission. When the user asks you to commit and push:
+**IMPORTANT**: NEVER commit and push changes without explicit user permission.
 
-1. Run `./lint-all.sh` to ensure code passes linting
+**NEW BRANCH REQUIREMENT**: ALL changes must be made on a new feature branch, never directly on main. When the user asks you to commit and push:
+
+1. **Always create a new branch** with a descriptive name (e.g., `organize-scripts`, `fix-auth-bug`, `add-feature-name`)
+2. **Make commits on the feature branch**
+3. **Push the feature branch to remote**
+4. **Never commit or push directly to main**
+
+When the user asks you to commit and push:
+
+1. Run `./scripts/lint-all.sh` to ensure code passes linting
 2. Follow the git commit guidelines in the main Claude system prompt
 3. Get explicit user confirmation before any `git push`
 
@@ -540,13 +549,13 @@ This approach:
 
 ### Optimizing Build Speed During Debugging
 
-**TIP**: Use `./build.sh --no-format` during debugging sessions to skip prettier formatting. This:
+**TIP**: Use `./scripts/build.sh --no-format` during debugging sessions to skip prettier formatting. This:
 
 - Reduces build time significantly
 - Minimizes output that gets sent to the AI model (reducing token count)
 - Makes the debugging cycle faster
 
-Only use the standard `./build.sh` (with formatting) for final builds before committing.
+Only use the standard `./scripts/build.sh` (with formatting) for final builds before committing.
 
 ## Debugging Tips
 

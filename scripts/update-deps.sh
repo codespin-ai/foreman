@@ -1,65 +1,87 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# -------------------------------------------------------------------
+# update-deps.sh – Update all dependencies to absolute latest versions
+# -------------------------------------------------------------------
+set -euo pipefail
 
-# Update dependencies script for Foreman
-# Updates all npm dependencies to their latest versions
+update_package_deps() {
+    local package_path="$1"
+    local package_name=$(basename "$package_path")
+    local original_dir=$(pwd)
 
-set -e
+    if [[ ! -f "$package_path/package.json" ]]; then
+        return
+    fi
 
-# Colors for output
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+    echo "Updating $package_name to latest versions..."
 
-# Get script directory and project root
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+    # Use subshell to avoid changing directory context
+    (
+        cd "$package_path"
 
-echo -e "${GREEN}Updating Foreman dependencies...${NC}"
+        # Get list of production dependencies (excluding local/workspace packages)
+        local deps=$(node -e "
+            const pkg = JSON.parse(require('fs').readFileSync('package.json', 'utf8'));
+            const deps = Object.keys(pkg.dependencies || {}).filter(dep => {
+                const version = pkg.dependencies[dep];
+                // Skip local dependencies (file:, link:, workspace:, @codespin/ packages)
+                return !version.startsWith('file:') &&
+                       !version.startsWith('link:') &&
+                       !version.startsWith('workspace:') &&
+                       !dep.startsWith('@codespin/') &&
+                       !dep.includes('foreman-');
+            });
+            if (deps.length > 0) console.log(deps.join(' '));
+        ")
 
-# Array of packages to update
-PACKAGES=(
-    "foreman-core"
-    "foreman-logger"
-    "foreman-db"
-    "foreman-server"
-    "foreman-client"
-)
+        # Get list of dev dependencies (excluding local/workspace packages)
+        local devdeps=$(node -e "
+            const pkg = JSON.parse(require('fs').readFileSync('package.json', 'utf8'));
+            const deps = Object.keys(pkg.devDependencies || {}).filter(dep => {
+                const version = pkg.devDependencies[dep];
+                // Skip local dependencies (file:, link:, workspace:, @codespin/ packages)
+                return !version.startsWith('file:') &&
+                       !version.startsWith('link:') &&
+                       !version.startsWith('workspace:') &&
+                       !dep.startsWith('@codespin/') &&
+                       !dep.includes('foreman-');
+            });
+            if (deps.length > 0) console.log(deps.join(' '));
+        ")
 
-# Update root dependencies
-echo -e "${YELLOW}Updating root package dependencies...${NC}"
-cd "$PROJECT_ROOT"
-npm update
+        # Update production dependencies to latest
+        if [[ -n "$deps" ]]; then
+            echo "  - Updating production dependencies..."
+            npm install --save --save-exact $deps@latest
+        fi
 
-# Update each package
-for package in "${PACKAGES[@]}"; do
-    PACKAGE_DIR="$PROJECT_ROOT/node/packages/$package"
-    
-    if [ -d "$PACKAGE_DIR" ]; then
-        echo -e "${YELLOW}Updating @codespin/$package dependencies...${NC}"
-        cd "$PACKAGE_DIR"
-        
-        # Update dependencies
-        npm update
-        
-        # Check for outdated packages
-        echo -e "${YELLOW}Checking for outdated packages in $package...${NC}"
-        npm outdated || true
-    else
-        echo -e "${RED}Warning: Package directory not found: $PACKAGE_DIR${NC}"
+        # Update dev dependencies to latest
+        if [[ -n "$devdeps" ]]; then
+            echo "  - Updating dev dependencies..."
+            npm install --save-dev --save-exact $devdeps@latest
+        fi
+    )
+
+    echo "  ✓ $package_name updated"
+}
+
+echo "=== Updating all dependencies to absolute latest versions ==="
+echo "This will update ALL packages to their newest available versions with exact versions."
+echo ""
+
+# Update root package
+echo "Updating root package..."
+update_package_deps "."
+
+# Update each package in node/packages/
+for pkg in node/packages/*; do
+    if [[ -d "$pkg" ]]; then
+        echo ""
+        update_package_deps "$pkg"
     fi
 done
 
-# Back to project root
-cd "$PROJECT_ROOT"
-
-# Run build to ensure everything still works
-echo -e "${YELLOW}Running build to verify updates...${NC}"
-if ./build.sh; then
-    echo -e "${GREEN}✓ Dependencies updated successfully!${NC}"
-    echo -e "${YELLOW}Note: Run 'npm outdated' in each package to see available major version updates${NC}"
-else
-    echo -e "${RED}✗ Build failed after dependency updates${NC}"
-    echo -e "${RED}You may need to resolve compatibility issues${NC}"
-    exit 1
-fi
+echo ""
+echo "=== All dependencies updated to latest exact versions ==="
+echo "⚠️  IMPORTANT: Run tests to ensure compatibility: npm test"
+echo "⚠️  Review changes carefully before committing"

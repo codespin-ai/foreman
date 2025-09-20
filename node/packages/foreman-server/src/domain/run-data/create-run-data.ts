@@ -48,6 +48,7 @@ export async function createRunData(
       }
 
       const id = uuidv4();
+      const now = Date.now();
 
       // Insert run data (allows multiple entries per key)
       const params = {
@@ -59,8 +60,8 @@ export async function createRunData(
         value: input.value as Record<string, unknown>,
         tags: input.tags || [],
         metadata: input.metadata || null,
-        created_at: new Date(),
-        updated_at: new Date(),
+        created_at: now,
+        updated_at: now,
       };
 
       const row = await t.one<RunDataDbRow>(

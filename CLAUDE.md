@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 ### NEVER ACT WITHOUT EXPLICIT USER APPROVAL
 
 **YOU MUST ALWAYS ASK FOR PERMISSION BEFORE:**
+
 - Making architectural decisions or changes
 - Implementing new features or functionality
 - Modifying APIs, interfaces, or data structures
@@ -18,6 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 ### FINISH DISCUSSIONS BEFORE WRITING CODE
 
 **IMPORTANT**: When the user asks a question or you're in the middle of a discussion, DO NOT jump to writing code. Always:
+
 1. **Complete the discussion first** - Understand the problem fully
 2. **Analyze and explain** - Work through the issue verbally
 3. **Get confirmation** - Ensure the user agrees with the approach
@@ -32,6 +34,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 ### First Steps When Starting a Session
 
 When you begin working on this project, you MUST:
+
 1. **Read this entire CLAUDE.md file** to understand the project structure and conventions
 2. **Check for ongoing tasks in `.todos/` directory** - Look for any in-progress task files
 3. **Read the key documentation files** in this order:
@@ -77,6 +80,7 @@ This guide helps AI assistants work effectively with the Foreman codebase. For p
 ### Greenfield Development Context
 
 **IMPORTANT**: Foreman is a greenfield project with no legacy constraints:
+
 - **No backward compatibility concerns** - No existing deployments or users to migrate
 - **No legacy code patterns** - All code should follow current best practices without compromise
 - **No migration paths needed** - Database schemas, APIs, and data structures can be designed optimally
@@ -89,6 +93,7 @@ This means: Focus on clean, optimal implementations without worrying about exist
 ### Documentation & Code Principles
 
 **Documentation Guidelines:**
+
 - Write as if the spec was designed from the beginning, not evolved over time
 - Avoid phrases like "now allows", "changed from", "previously was"
 - Present features and constraints as inherent design decisions
@@ -97,6 +102,7 @@ This means: Focus on clean, optimal implementations without worrying about exist
 - Keep README.md as single source of truth
 
 **Code Principles:**
+
 - **NO BACKWARDS COMPATIBILITY** - Do not write backwards compatibility code
 - **NO CLASSES** - Export functions from modules only, use explicit dependency injection
 - **NO DYNAMIC IMPORTS** - Always use static imports, never `await import()` or `import()`
@@ -106,13 +112,16 @@ This means: Focus on clean, optimal implementations without worrying about exist
 ## Core Architecture Principles
 
 ### 1. ID-Only Queue Pattern
+
 - **NEVER** store task data in queues (BullMQ, SQS, etc.)
 - **ALWAYS** store all task data in PostgreSQL
 - Queues contain only task IDs
 - Workers fetch full data from Foreman before processing
 
 ### 2. Security: Never Use npx
+
 **CRITICAL SECURITY REQUIREMENT**: NEVER use `npx` for any commands. This poses grave security risks by executing arbitrary code.
+
 - **ALWAYS use exact dependency versions** in package.json
 - **ALWAYS use local node_modules binaries** (e.g., `prettier`, `mocha`, `http-server`)
 - **NEVER use `npx prettier`** - use `prettier` from local dependencies
@@ -121,6 +130,7 @@ This means: Focus on clean, optimal implementations without worrying about exist
 **Exception**: Only acceptable `npx` usage is for one-time project initialization when explicitly setting up new projects.
 
 ### 3. REST API Design
+
 - RESTful endpoints (no GraphQL)
 - JSON request/response bodies
 - Standard HTTP status codes
@@ -128,6 +138,7 @@ This means: Focus on clean, optimal implementations without worrying about exist
 - Consistent error response format
 
 ### 4. Database Conventions
+
 - **PostgreSQL** with **Knex.js** for migrations, **pg-promise** for data access (NO ORMs)
 - Table names: **singular** and **snake_case** (e.g., `run`, `task`, `run_data`)
 - TypeScript: **camelCase** for all variables/properties
@@ -137,11 +148,13 @@ This means: Focus on clean, optimal implementations without worrying about exist
 - **Type-safe Queries**: All queries use `db.one<XxxDbRow>()` with explicit type parameters
 
 **Query Optimization Guidelines**:
+
 - **Prefer simple separate queries over complex joins** when it only saves 1-3 database calls
 - **Use joins only to prevent N+1 query problems** (e.g., fetching data for many items in a loop)
 - **Prioritize code simplicity and readability** over minor performance optimizations
 
 ### 5. ESM Modules
+
 - All imports MUST include `.js` extension: `import { foo } from "./bar.js"`
 - TypeScript configured for `"module": "NodeNext"`
 - Type: `"module"` in all package.json files
@@ -227,12 +240,14 @@ npm run test:client:grep -- "fetch workflow"  # Only client tests
 ### Git Workflow
 
 **CRITICAL GIT SAFETY RULES**:
+
 1. **NEVER use `git push --force` or `git push -f`** - Force pushing destroys history
 2. **ALL git push commands require EXPLICIT user authorization**
 3. **Use revert commits instead of force push** - To undo changes, create revert commits
 4. **If you need to overwrite remote**, explain consequences and get explicit confirmation
 
 **IMPORTANT**: NEVER commit or push changes without explicit user instruction
+
 - Only run `git add`, `git commit`, or `git push` when the user explicitly asks
 - Common explicit instructions include: "commit", "push", "commit and push", "save to git"
 - Always wait for user approval before making any git operations
@@ -240,6 +255,7 @@ npm run test:client:grep -- "fetch workflow"  # Only client tests
 **NEW BRANCH REQUIREMENT**: ALL changes must be made on a new feature branch, never directly on main.
 
 When the user asks you to commit and push:
+
 1. Run `./scripts/format-all.sh` to format all files with Prettier
 2. Run `./scripts/lint-all.sh` to ensure code passes linting
 3. Follow the git commit guidelines in the main Claude system prompt
@@ -345,7 +361,9 @@ router.post("/", authenticate, async (req, res) => {
 const result = await foreman.createTask({
   runId: "run-123",
   type: "process",
-  inputData: { /* data */ },
+  inputData: {
+    /* data */
+  },
 });
 
 if (!result.success) {
@@ -359,12 +377,14 @@ const task = result.data;
 ## Key Data Model Concepts
 
 ### Runs
+
 - Top-level execution context
 - Contains input/output data and metadata
 - Tracks overall status and metrics
 - Organization-scoped for multi-tenancy
 
 ### Tasks
+
 - Individual units of work within a run
 - Hierarchical (parent-child relationships)
 - Status lifecycle: pending → queued → running → completed/failed
@@ -372,6 +392,7 @@ const task = result.data;
 - Links to external queue job IDs
 
 ### Run Data
+
 - Key-value storage for inter-task communication
 - Supports multiple values per key (no unique constraint)
 - Tags array for categorization and filtering
@@ -379,6 +400,7 @@ const task = result.data;
 - Tracks which task created each entry
 
 ### Authentication
+
 - Simple Bearer token validation
 - No database storage (fully trusted environment)
 - All authenticated users have full access
@@ -429,6 +451,7 @@ Benefits: Keeps analysis artifacts separate from source code, allows iterative w
 ### Build & Lint Workflow
 
 **ALWAYS follow this sequence:**
+
 1. Run `./scripts/lint-all.sh` first
 2. Run `./scripts/build.sh`
 3. **If build fails and you make changes**: You MUST run `./scripts/lint-all.sh` again before building
@@ -438,6 +461,7 @@ Benefits: Keeps analysis artifacts separate from source code, allows iterative w
 ## Common Development Tasks
 
 ### Adding a New Domain Entity
+
 1. Add types to `foreman-server/src/types.ts`
 2. Create migration in `/database/foreman/migrations/`
 3. Add mapper functions to `foreman-server/src/mappers.ts`
@@ -446,6 +470,7 @@ Benefits: Keeps analysis artifacts separate from source code, allows iterative w
 6. Update client in `foreman-client/src/index.ts`
 
 ### Adding a New API Endpoint
+
 1. Define request/response types
 2. Create Zod validation schemas
 3. Implement domain function with Result type
@@ -454,6 +479,7 @@ Benefits: Keeps analysis artifacts separate from source code, allows iterative w
 6. Document in `/docs/api.md`
 
 ### Database Changes
+
 1. Create migration: `npm run migrate:foreman:make your_migration_name`
 2. Edit migration file with up/down functions
 3. Run migration: `npm run migrate:foreman:latest` (only when asked)
@@ -462,6 +488,7 @@ Benefits: Keeps analysis artifacts separate from source code, allows iterative w
 ## API Response Formats
 
 ### Pagination
+
 All list endpoints return paginated results:
 
 ```typescript
@@ -476,12 +503,14 @@ All list endpoints return paginated results:
 ```
 
 ### Error Responses
+
 - 400: Invalid request data or validation errors
 - 401: Authentication required or invalid Bearer token
 - 404: Resource not found
 - 500: Internal server error
 
 Error format:
+
 ```json
 {
   "error": "Error message",
@@ -490,7 +519,9 @@ Error format:
 ```
 
 ### Run Data Query API
+
 The `GET /api/v1/runs/:runId/data` endpoint supports flexible querying:
+
 - `key`: Exact key match
 - `keys`: Multiple exact keys (comma-separated)
 - `keyStartsWith`: Key prefix match
@@ -509,7 +540,9 @@ The core principle of Foreman:
 
 ```typescript
 // 1. Create task with full data in Foreman
-const task = await foreman.createTask({ /* all data */ });
+const task = await foreman.createTask({
+  /* all data */
+});
 
 // 2. Queue ONLY the task ID
 await queue.add("process", { taskId: task.data.id });

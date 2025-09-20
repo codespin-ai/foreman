@@ -54,6 +54,7 @@ export async function createTask(
       }
 
       const id = uuidv4();
+      const now = Date.now();
 
       // Create task
       const params = {
@@ -65,8 +66,10 @@ export async function createTask(
         status: "pending",
         input_data: input.inputData as Record<string, unknown>,
         metadata: input.metadata || null,
+        retry_count: 0,
         max_retries: input.maxRetries || 3,
-        created_at: new Date(),
+        created_at: now,
+        updated_at: now,
       };
 
       const row = await t.one<TaskDbRow>(
@@ -76,8 +79,8 @@ export async function createTask(
 
       // Update run task count
       await t.none(
-        `UPDATE run SET total_tasks = total_tasks + 1 WHERE id = $(run_id)`,
-        { run_id: input.runId },
+        `UPDATE run SET total_tasks = total_tasks + 1, updated_at = $(now) WHERE id = $(run_id)`,
+        { run_id: input.runId, now: Date.now() },
       );
 
       logger.info("Created task", { id, runId: input.runId, type: input.type });

@@ -21,7 +21,10 @@ export async function updateRun(
   input: UpdateRunInput,
 ): Promise<Result<Run, Error>> {
   try {
-    const updateParams: Record<string, unknown> = {};
+    const now = Date.now();
+    const updateParams: Record<string, unknown> = {
+      updated_at: now,
+    };
     const additionalUpdates: string[] = [];
 
     if (input.status !== undefined) {
@@ -29,14 +32,14 @@ export async function updateRun(
 
       // Set started_at when transitioning to running
       if (input.status === "running") {
-        additionalUpdates.push("started_at = COALESCE(started_at, NOW())");
+        additionalUpdates.push(`started_at = COALESCE(started_at, ${now})`);
       }
 
       // Set completed_at and calculate duration when transitioning to terminal state
       if (["completed", "failed", "cancelled"].includes(input.status)) {
-        additionalUpdates.push("completed_at = NOW()");
+        updateParams.completed_at = now;
         additionalUpdates.push(
-          "duration_ms = EXTRACT(EPOCH FROM (NOW() - COALESCE(started_at, created_at))) * 1000",
+          `duration_ms = ${now} - COALESCE(started_at, created_at)`,
         );
       }
     }

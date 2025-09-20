@@ -54,10 +54,10 @@ export async function updateRunDataTags(
       const row = await t.one<RunDataDbRow>(
         `UPDATE run_data
          SET tags = $(tags),
-             updated_at = NOW()
+             updated_at = $(updated_at)
          WHERE id = $(data_id)
          RETURNING *`,
-        { data_id: dataId, tags: newTags },
+        { data_id: dataId, tags: newTags, updated_at: Date.now() },
       );
 
       logger.info("Updated run data tags", {

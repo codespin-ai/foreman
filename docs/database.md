@@ -8,7 +8,7 @@ Foreman uses PostgreSQL as its primary data store, following the principle that 
 
 1. **Single Source of Truth**: All task and run data stored in PostgreSQL
 2. **Multi-tenancy**: Every table has `org_id` for organization isolation
-3. **Timestamps**: Created/updated timestamps for tracking
+3. **Timestamps**: Created/updated timestamps stored as BIGINT (epoch milliseconds)
 4. **Flexible Storage**: JSONB for variable data structures
 5. **Referential Integrity**: Foreign keys with appropriate cascades
 
@@ -50,12 +50,13 @@ CREATE TABLE run (
   output_data JSONB,
   error_data JSONB,
   metadata JSONB,
-  total_tasks INTEGER DEFAULT 0,
-  completed_tasks INTEGER DEFAULT 0,
-  failed_tasks INTEGER DEFAULT 0,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  started_at TIMESTAMP,
-  completed_at TIMESTAMP,
+  total_tasks INTEGER NOT NULL,
+  completed_tasks INTEGER NOT NULL,
+  failed_tasks INTEGER NOT NULL,
+  created_at BIGINT NOT NULL,
+  updated_at BIGINT NOT NULL,
+  started_at BIGINT,
+  completed_at BIGINT,
   duration_ms BIGINT
 );
 
@@ -74,6 +75,7 @@ CREATE INDEX idx_run_created ON run(created_at DESC);
 - `output_data`: Final results after completion
 - `error_data`: Error details if run failed
 - `metadata`: Additional flexible data (tags, labels, etc.)
+- `created_at`/`updated_at`: Epoch milliseconds from application
 - `duration_ms`: Calculated as `completed_at - started_at` in milliseconds
 
 ### Task Table
@@ -87,19 +89,20 @@ CREATE TABLE task (
   parent_task_id UUID REFERENCES task(id) ON DELETE CASCADE,
   org_id VARCHAR(255) NOT NULL,
   type VARCHAR(255) NOT NULL,
-  status VARCHAR(50) NOT NULL DEFAULT "pending"
+  status VARCHAR(50) NOT NULL
     CHECK (status IN ("pending", "queued", "running", "completed",
                       "failed", "cancelled", "retrying")),
   input_data JSONB NOT NULL,
   output_data JSONB,
   error_data JSONB,
   metadata JSONB,
-  retry_count INTEGER DEFAULT 0,
-  max_retries INTEGER DEFAULT 3 CHECK (max_retries >= 0 AND max_retries <= 10),
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  queued_at TIMESTAMP,
-  started_at TIMESTAMP,
-  completed_at TIMESTAMP,
+  retry_count INTEGER NOT NULL,
+  max_retries INTEGER NOT NULL CHECK (max_retries >= 0 AND max_retries <= 10),
+  created_at BIGINT NOT NULL,
+  updated_at BIGINT NOT NULL,
+  queued_at BIGINT,
+  started_at BIGINT,
+  completed_at BIGINT,
   duration_ms BIGINT,
   queue_job_id VARCHAR(255)
 );
@@ -133,10 +136,10 @@ CREATE TABLE run_data (
   org_id VARCHAR(255) NOT NULL,
   key VARCHAR(255) NOT NULL,
   value JSONB NOT NULL,
-  tags TEXT[] NOT NULL DEFAULT "{}",
+  tags TEXT[] NOT NULL,
   metadata JSONB,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+  created_at BIGINT NOT NULL,
+  updated_at BIGINT NOT NULL
 );
 
 -- Note: No unique constraint on (run_id, key) - allows multiple entries
@@ -150,18 +153,6 @@ CREATE INDEX idx_run_data_created ON run_data(created_at DESC);
 CREATE INDEX idx_run_data_tags ON run_data USING GIN(tags);
 CREATE INDEX idx_run_data_key_prefix ON run_data(key text_pattern_ops);
 
--- Trigger for updated_at
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER update_run_data_updated_at
-  BEFORE UPDATE ON run_data
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
 **Column Notes:**
@@ -170,7 +161,7 @@ CREATE TRIGGER update_run_data_updated_at
 - `task_id`: Which task created/updated this data
 - `value`: Arbitrary JSON data
 - `tags`: Array of text tags for categorization and filtering
-- `updated_at`: Automatically updated on changes
+- `created_at`/`updated_at`: Epoch milliseconds managed by application
 
 **Index Notes:**
 

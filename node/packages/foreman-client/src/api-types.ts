@@ -16,9 +16,10 @@ export type Run = {
   totalTasks: number;
   completedTasks: number;
   failedTasks: number;
-  createdAt: string;
-  startedAt?: string;
-  completedAt?: string;
+  createdAt: number;
+  updatedAt: number;
+  startedAt?: number;
+  completedAt?: number;
   durationMs?: number;
 };
 
@@ -57,10 +58,11 @@ export type Task = {
   metadata?: Record<string, unknown>;
   retryCount: number;
   maxRetries: number;
-  createdAt: string;
-  queuedAt?: string;
-  startedAt?: string;
-  completedAt?: string;
+  createdAt: number;
+  updatedAt: number;
+  queuedAt?: number;
+  startedAt?: number;
+  completedAt?: number;
   durationMs?: number;
   queueJobId?: string;
 };
@@ -103,8 +105,8 @@ export type RunData = {
   value: unknown;
   tags: string[];
   metadata?: Record<string, unknown>;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: number;
+  updatedAt: number;
 };
 
 export type CreateRunDataInput = {

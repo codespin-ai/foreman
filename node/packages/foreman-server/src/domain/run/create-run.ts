@@ -25,6 +25,7 @@ export async function createRun(
     }
 
     const id = uuidv4();
+    const now = Date.now();
 
     const params = {
       id,
@@ -32,7 +33,11 @@ export async function createRun(
       status: "pending",
       input_data: input.inputData as Record<string, unknown>,
       metadata: input.metadata || null,
-      created_at: new Date(),
+      total_tasks: 0,
+      completed_tasks: 0,
+      failed_tasks: 0,
+      created_at: now,
+      updated_at: now,
     };
 
     const row = await ctx.db.one<RunDbRow>(

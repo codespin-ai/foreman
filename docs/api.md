@@ -457,8 +457,8 @@ Response:
       "metadata": {
         /* metadata */
       },
-      "createdAt": "2024-01-01T00:00:00Z",
-      "updatedAt": "2024-01-01T00:00:00Z"
+      "createdAt": 1704067200000,
+      "updatedAt": 1704067200000
     }
   ],
   "pagination": {
@@ -638,7 +638,7 @@ Default rate limit: 100 requests per 15 minutes per Bearer token.
 
 ### Response Fields
 
-All timestamps include:
+All timestamps are epoch milliseconds (number type):
 
 - `createdAt` - When the resource was created
 - `updatedAt` - When the resource was last modified (for run and task)

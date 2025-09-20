@@ -118,7 +118,7 @@ describe("Run Data API", () => {
 
   describe("GET /api/v1/runs/:runId/data", () => {
     beforeEach(async () => {
-      // Create some test data
+      // Create some test data with small delays to ensure different timestamps
       await client.post(`/api/v1/runs/${runId}/data`, {
         taskId,
         key: "user-data",
@@ -126,12 +126,18 @@ describe("Run Data API", () => {
         tags: ["user", "profile"],
       });
 
+      // Small delay to ensure different timestamp
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
       await client.post(`/api/v1/runs/${runId}/data`, {
         taskId,
         key: "config",
         value: { theme: "dark", lang: "en" },
         tags: ["config", "settings"],
       });
+
+      // Small delay to ensure different timestamp
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       await client.post(`/api/v1/runs/${runId}/data`, {
         taskId,
@@ -204,9 +210,7 @@ describe("Run Data API", () => {
       );
 
       expect(response.status).to.equal(200);
-      const dates = response.data.data.map((item: any) =>
-        new Date(item.createdAt).getTime(),
-      );
+      const dates = response.data.data.map((item: any) => item.createdAt);
 
       // Check if sorted in descending order
       for (let i = 1; i < dates.length; i++) {

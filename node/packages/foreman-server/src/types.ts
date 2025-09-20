@@ -32,10 +32,10 @@ export type Run = {
   totalTasks: number;
   completedTasks: number;
   failedTasks: number;
-  createdAt: Date;
-  updatedAt: Date;
-  startedAt?: Date;
-  completedAt?: Date;
+  createdAt: number;
+  updatedAt: number;
+  startedAt?: number;
+  completedAt?: number;
   durationMs?: number;
 };
 
@@ -53,11 +53,11 @@ export type Task = {
   metadata?: Record<string, unknown>;
   retryCount: number;
   maxRetries: number;
-  createdAt: Date;
-  updatedAt: Date;
-  queuedAt?: Date;
-  startedAt?: Date;
-  completedAt?: Date;
+  createdAt: number;
+  updatedAt: number;
+  queuedAt?: number;
+  startedAt?: number;
+  completedAt?: number;
   durationMs?: number;
   queueJobId?: string;
 };
@@ -72,8 +72,8 @@ export type RunData = {
   value: unknown;
   tags: string[];
   metadata?: Record<string, unknown>;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: number;
+  updatedAt: number;
 };
 
 // Note: API keys are validated in middleware without database storage
@@ -91,11 +91,11 @@ export type RunDbRow = {
   total_tasks: number;
   completed_tasks: number;
   failed_tasks: number;
-  created_at: Date;
-  updated_at: Date;
-  started_at: Date | null;
-  completed_at: Date | null;
-  duration_ms: string | null; // bigint comes as string
+  created_at: number;
+  updated_at: number;
+  started_at: number | null;
+  completed_at: number | null;
+  duration_ms: number | null;
 };
 
 export type TaskDbRow = {
@@ -111,12 +111,12 @@ export type TaskDbRow = {
   metadata: unknown | null;
   retry_count: number;
   max_retries: number;
-  created_at: Date;
-  updated_at: Date;
-  queued_at: Date | null;
-  started_at: Date | null;
-  completed_at: Date | null;
-  duration_ms: string | null; // bigint comes as string
+  created_at: number;
+  updated_at: number;
+  queued_at: number | null;
+  started_at: number | null;
+  completed_at: number | null;
+  duration_ms: number | null;
   queue_job_id: string | null;
 };
 
@@ -129,8 +129,8 @@ export type RunDataDbRow = {
   value: unknown;
   tags: string[];
   metadata: unknown | null;
-  created_at: Date;
-  updated_at: Date;
+  created_at: number;
+  updated_at: number;
 };
 
 // API request/response types

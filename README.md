@@ -261,7 +261,7 @@ const results = await queryRunData(foremanConfig, run.data.id, {
 await updateRun(foremanConfig, run.data.id, {
   status: "completed",
   outputData: {
-    processedAt: new Date().toISOString(),
+    processedAt: Date.now(),
     totalAmount: 99.99,
   },
 });

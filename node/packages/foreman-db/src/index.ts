@@ -4,6 +4,7 @@ export * as sql from "./sql.js";
 export { createLazyDb } from "./lazy-db.js";
 
 const pgp = pgPromise();
+pgp.pg.types.setTypeParser(20, (val: string) => parseInt(val, 10));
 
 // Export the Database interface - this is what all consumers use
 export interface Database {

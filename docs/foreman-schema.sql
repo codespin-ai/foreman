@@ -2,6 +2,8 @@
 -- PostgreSQL database dump
 --
 
+\restrict T9mAzUlKGOrVZYDURTr9d3xG7qJVb5HX30er9tYTQjIsNjhpt3JmNjAcs2h4pcM
+
 
 
 SET statement_timeout = 0;
@@ -23,7 +25,9 @@ DROP DATABASE IF EXISTS foreman;
 CREATE DATABASE foreman WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE_PROVIDER = libc LOCALE = 'en_US.utf8';
 
 
+\unrestrict T9mAzUlKGOrVZYDURTr9d3xG7qJVb5HX30er9tYTQjIsNjhpt3JmNjAcs2h4pcM
 \connect foreman
+\restrict T9mAzUlKGOrVZYDURTr9d3xG7qJVb5HX30er9tYTQjIsNjhpt3JmNjAcs2h4pcM
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -35,20 +39,6 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
-
---
--- Name: update_updated_at_column(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.update_updated_at_column() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-    BEGIN
-      NEW.updated_at = NOW();
-      RETURN NEW;
-    END;
-    $$;
-
 
 SET default_table_access_method = heap;
 
@@ -123,18 +113,18 @@ ALTER SEQUENCE public.knex_migrations_lock_index_seq OWNED BY public.knex_migrat
 CREATE TABLE public.run (
     id uuid NOT NULL,
     org_id character varying(255) NOT NULL,
-    status character varying(50) DEFAULT 'pending'::character varying NOT NULL,
+    status character varying(50) NOT NULL,
     input_data jsonb NOT NULL,
     output_data jsonb,
     error_data jsonb,
     metadata jsonb,
-    total_tasks integer DEFAULT 0,
-    completed_tasks integer DEFAULT 0,
-    failed_tasks integer DEFAULT 0,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    started_at timestamp with time zone,
-    completed_at timestamp with time zone,
+    total_tasks integer NOT NULL,
+    completed_tasks integer NOT NULL,
+    failed_tasks integer NOT NULL,
+    created_at bigint NOT NULL,
+    updated_at bigint NOT NULL,
+    started_at bigint,
+    completed_at bigint,
     duration_ms bigint
 );
 
@@ -151,9 +141,9 @@ CREATE TABLE public.run_data (
     key character varying(255) NOT NULL,
     value jsonb NOT NULL,
     metadata jsonb,
-    tags text[] DEFAULT '{}'::text[] NOT NULL,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    tags text[] NOT NULL,
+    created_at bigint NOT NULL,
+    updated_at bigint NOT NULL
 );
 
 
@@ -167,18 +157,18 @@ CREATE TABLE public.task (
     parent_task_id uuid,
     org_id character varying(255) NOT NULL,
     type character varying(255) NOT NULL,
-    status character varying(50) DEFAULT 'pending'::character varying NOT NULL,
+    status character varying(50) NOT NULL,
     input_data jsonb NOT NULL,
     output_data jsonb,
     error_data jsonb,
     metadata jsonb,
-    retry_count integer DEFAULT 0,
-    max_retries integer DEFAULT 3,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    queued_at timestamp with time zone,
-    started_at timestamp with time zone,
-    completed_at timestamp with time zone,
+    retry_count integer NOT NULL,
+    max_retries integer NOT NULL,
+    created_at bigint NOT NULL,
+    updated_at bigint NOT NULL,
+    queued_at bigint,
+    started_at bigint,
+    completed_at bigint,
     duration_ms bigint,
     queue_job_id character varying(255)
 );
@@ -351,27 +341,6 @@ CREATE INDEX task_type_index ON public.task USING btree (type);
 
 
 --
--- Name: run_data update_run_data_updated_at; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER update_run_data_updated_at BEFORE UPDATE ON public.run_data FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
-
---
--- Name: run update_run_updated_at; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER update_run_updated_at BEFORE UPDATE ON public.run FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
-
---
--- Name: task update_task_updated_at; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER update_task_updated_at BEFORE UPDATE ON public.task FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
-
---
 -- Name: run_data run_data_run_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -403,8 +372,52 @@ ALTER TABLE ONLY public.task
     ADD CONSTRAINT task_run_id_foreign FOREIGN KEY (run_id) REFERENCES public.run(id) ON DELETE CASCADE;
 
 
+--
+-- Dependencies: 219
+-- Name: run; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.run ENABLE ROW LEVEL SECURITY;
+
+--
+-- Dependencies: 221
+-- Name: run_data; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.run_data ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: run_data run_data_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY run_data_isolation ON public.run_data TO rls_db_user USING (((org_id)::text = current_setting('app.current_org_id'::text, true)));
+
+
+--
+-- Name: run run_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY run_isolation ON public.run TO rls_db_user USING (((org_id)::text = current_setting('app.current_org_id'::text, true)));
+
+
+--
+-- Dependencies: 220
+-- Name: task; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.task ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: task task_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY task_isolation ON public.task TO rls_db_user USING (((org_id)::text = current_setting('app.current_org_id'::text, true)));
+
+
 
 --
 -- PostgreSQL database dump complete
 --
+
+\unrestrict T9mAzUlKGOrVZYDURTr9d3xG7qJVb5HX30er9tYTQjIsNjhpt3JmNjAcs2h4pcM
 

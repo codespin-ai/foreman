@@ -91,10 +91,10 @@ See the [foreman-client README](node/packages/foreman-client/README.md) for deta
 git clone https://github.com/codespin-ai/foreman.git
 cd foreman
 
-# Install dependencies
-npm install
+# Install dependencies (optional - build.sh does this automatically)
+./scripts/install-deps.sh
 
-# Build all packages
+# Build all packages (includes dependency installation)
 ./scripts/build.sh
 ```
 
@@ -520,8 +520,17 @@ Both test suites:
 ### Building
 
 ```bash
-# Build all packages
+# Install dependencies for all packages
+./scripts/install-deps.sh
+
+# Force reinstall all dependencies
+./scripts/install-deps.sh --force
+
+# Build all packages (includes dependency installation)
 ./scripts/build.sh
+
+# Build with forced dependency reinstall
+./scripts/build.sh --install
 
 # Run linting
 ./scripts/lint-all.sh

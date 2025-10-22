@@ -1,5 +1,3 @@
-import fetch, { RequestInit, Response } from "node-fetch";
-
 export interface HttpResponse<T = any> {
   data: T;
   status: number;

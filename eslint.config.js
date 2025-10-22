@@ -30,6 +30,7 @@ export default [
         { argsIgnorePattern: "^_" },
       ],
       "no-console": ["error", { allow: ["warn", "error", "info"] }],
+      "no-undef": "off", // TypeScript handles this
       "prefer-const": "error",
       "no-var": "error",
       quotes: [
@@ -88,6 +89,7 @@ export default [
       ],
       "@typescript-eslint/no-unused-expressions": "off",
       "no-console": "off",
+      "no-undef": "off", // TypeScript handles this
       "prefer-const": "error",
       "no-var": "error",
       quotes: [
